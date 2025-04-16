@@ -2,34 +2,34 @@
   "environment": "tst",
   "environmentName": "Test",
   "meshName": "meshName-test",
-  "domainName": "EXS-Chauffeurs",
+  "domainName": "sampleDomain",
   "applications": [
     {
-      "name": "MENDIX",
-      "version": "0.1.2",
+      "name": "Application_1",
+      "version": "0.1.0",
       "users": [
         {
-          "name": "mendix",
-          "password": "mendix-tst"
+          "name": "appl-1-user-tst",
+          "password": "appl-1-pwd-tst"
         }
       ]
     },
     {
-      "name": "SAP26",
-      "version": "0.1.1",
+      "name": "Application_2",
+      "version": "0.1.0",
       "users": [
         {
-          "name": "sap26",
-          "password": "sap26-tst"
+          "name": "appl-2-user-tst",
+          "password": "appl-2-pwd-tst"
         }
       ]
     }
   ],
   "brokers": [ {
-    "name": "Enexis-TST",
-    "url": "https://mr-connection-3kow6eoyryg.messaging.solace.cloud:943/SEMP/v2/config",
+    "name": "brokerName",
+    "url": "https://mr-connection-[brokerId].messaging.solace.cloud:943/SEMP/v2/config",
     "user": "mission-control-manager",
-    "password": "qeldvul82n825kvhe27bva90u0",
-    "msgVpnName": "enexis"
+    "password": "<secret>",
+    "msgVpnName": "vpnName"
   }]
 }
