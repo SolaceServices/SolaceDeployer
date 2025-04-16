@@ -7,22 +7,20 @@
     {
       "name": "Application_1",
       "version": "0.1.0",
-      "users": [
-        {
-          "name": "appl-1-user-tst",
-          "password": "appl-1-pwd-tst"
-        }
-      ]
+      "user": {
+        "name": "appl-1-user-tst",
+        "type": "solaceClientUsername",
+        "password": "appl-1-pwd-tst"
+      }
     },
     {
       "name": "Application_2",
       "version": "0.1.0",
-      "users": [
-        {
-          "name": "appl-2-user-tst",
-          "password": "appl-2-pwd-tst"
-        }
-      ]
+      "user": {
+        "name": "appl-2-user-tst",
+        "type": "solaceClientUsername",
+        "password": "appl-2-pwd-tst"
+      }
     }
   ],
   "brokers": [ {

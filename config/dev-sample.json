@@ -7,22 +7,20 @@
     {
       "name": "Application_1",
       "version": "0.1.0",
-      "users": [
-        {
-          "name": "app-1-user",
-          "password": "app1-pwd"
-        }
-      ]
+      "user": {
+        "name": "app-1-user",
+        "type": "solaceClientUsername",
+        "password": "app1-pwd"
+      }
     },
     {
       "name": "Application_2",
       "version": "0.1.0",
-      "users": [
-        {
-          "name": "app-2-user",
-          "password": "app-2-pwd"
-        }
-      ]
+      "user": {
+        "name": "app-2-user",
+        "type": "solaceClientUsername",
+        "password": "app-2-pwd"
+      }
     }
   ],
   "brokers": [

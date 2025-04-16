@@ -4,7 +4,7 @@ This project can be used inside a CICD pipeline to execute deployments and undep
 
 ## Prerequisites
 
-- python3 [> 3.10]
+- python3 [>= 3.12]
 - virtual environment activated
 -
 ```console
@@ -85,9 +85,9 @@ The new (requested) configuration will  be used for deployment and the original 
 Create the semp config sections:
 
 The configuration can be divided into 3 parts:
-1. solaceAcl section
-2. solaceClientUsername section
-3. one or more solaceQueue sections
+1. solaceAcl section (only 1)
+2. solaceClientUsername or solaceAuthorizationGroup or solaceClientCertificateUsername section (only 1)
+3. one or more solaceQueue sections (1 or more)
 
 These have to be transformed to appropriate patch commands for the SEMP/v2 API or a set of terraform modules.
 
@@ -157,7 +157,7 @@ Get aclProfileName from response: _$..existing[?(@.type=='solaceAcl')].value.acl
 
 DELETE  /msgVpns/{msgVpnName}/aclProfiles/{aclProfileName}
 
-##### 2.  SolaceClientUsername
+##### 2.a.  SolaceClientUsername
 
 The Solace ClientUsername section is translated into a single SEMP/v2  call:
 1. Create clientUsername: POST /msgVpns/{msgVpnName}/clientUsernames
@@ -189,6 +189,66 @@ Get clientUsername from response: _$..existing[?(@.type=='solaceClientUsername')
 
 DELETE /msgVpns/{msgVpnName}/clientUsernames/{clientUsername}
 
+##### 2.b.  SolaceAuthorizationGroup
+
+The Solace AuthorizationGroup section is translated into a single SEMP/v2  call:
+1. Create authorizationGroup: POST /msgVpns/{msgVpnName}/authorizationGroups
+2. Delete authorizationGroup: DELETE /msgVpns/{msgVpnName}/authorizationGroups/{authorizationGroup}
+
+**Create authorizationGroup:**
+
+Get body from response: _$..requested[?(@.type=='solaceAuthorizationGroup')]_ and add msgVpnName
+
+POST /msgVpns/{msgVpnName}/authorizationGroups
+
+Body:
+```
+{
+    "aclProfileName": "[aclProfileName]",
+    "authorizationGroupName": "[authorizationGroup]",
+    "clientProfileName": "default",
+    "enabled": true,
+    "msgVpnName": "[msgVpnName]"
+  }
+```
+
+**Delete authorizationGroup**
+
+Get authorizationGroup from response: _$..existing[?(@.type=='solaceAuthorizationGroup')].value.authorizationGroupName_ and use that in the url.
+
+DELETE /msgVpns/{msgVpnName}/authorizationGroups/{authorizationGroup}
+
+##### 2.c.  SolaceClientCertificateUsername
+
+The Solace ClientCertificateUsername section is translated into a single SEMP/v2  call:
+1. Create clientCertificateUsername: POST /msgVpns/{msgVpnName}/clientUsernames
+2. Delete clientCertificateUsername: DELETE /msgVpns/{msgVpnName}/clientUsernames/{clientCertificateUsername}
+
+**Create clientCertificateUsername:**
+
+Get body from response: _$..requested[?(@.type=='solaceClientCertificateUsername')]_ and add msgVpnName
+
+POST /msgVpns/{msgVpnName}/clientUsernames
+
+Body:
+```
+{
+    "subscriptionManagerEnabled": false,
+    "clientUsername": "[clientCertificateUsername]",
+    "clientProfileName": "[clientProfileName]",
+    "guaranteedEndpointPermissionOverrideEnabled": false,
+    "aclProfileName": "app-[applicationId]",
+    "enabled": true,
+    "msgVpnName": "[msgVpnName]"
+  }
+```
+
+**Delete clientCertificateUsername**
+
+Get clientCertificateUsername from response: _$..existing[?(@.type=='solaceClientCertificateUsername')].value.clientUsername_ and use that in the url.
+
+DELETE /msgVpns/{msgVpnName}/clientUsernames/{clientCertificateUsername}
+
 ##### 3. SolaceQueue section
 
 The Solace Queue section is translated into 3 separate SEMP/V2 calls per queue:
@@ -210,45 +270,11 @@ Body:
 {
     "msgVpnName": "[msgVpnName]",
     "accessType": "exclusive",
-    "consumerAckPropagationEnabled": true,
-    "deadMsgQueue": "#DEAD_MSG_QUEUE",
-    "deliveryCountEnabled": false,
-    "deliveryDelay": 0,
-    "egressEnabled": true,
-    "eventBindCountThreshold": {
-      "setPercent": 80,
-      "clearPercent": 60
-    },
-    "redeliveryEnabled": true,
-    "redeliveryDelayMaxInterval": 64000,
-    "rejectLowPriorityMsgLimit": 0,
-    "maxMsgSize": 10000000,
-    "partitionCount": 0,
-    "rejectMsgToSenderOnDiscardBehavior": "when-queue-enabled",
-    "redeliveryDelayEnabled": false,
-    "respectMsgPriorityEnabled": false,
-    "rejectLowPriorityMsgEnabled": false,
-    "maxDeliveredUnackedMsgsPerFlow": 10000,
-    "redeliveryDelayInitialInterval": 1000,
-    "owner": "[clientName]",
-    "maxBindCount": 1000,
-    "eventMsgSpoolUsageThreshold": {
-      "setPercent": 25,
-      "clearPercent": 18
-    },
-    "partitionRebalanceDelay": 5,
-    "maxTtl": 0,
-    "partitionRebalanceMaxHandoffTime": 3,
-    "respectTtlEnabled": false,
-    "permission": "no-access",
-    "maxRedeliveryCount": 0,
     "ingressEnabled": true,
+    "owner": "[clientUsername or clientCertificatUsername or authorizationGroup]",
     "queueName": "[queueName]",
-    "redeliveryDelayMultiplier": 200,
-    "eventRejectLowPriorityMsgLimitThreshold": {
-      "setPercent": 80,
-      "clearPercent": 60
-    },
+    "egressEnabled": true,
+    "permission": "no-access",
     "maxMsgSpoolUsage": 5000
 }
 ```
@@ -312,11 +338,21 @@ config/dev.json
   "applications": [
     {
       "name": "Application_1",
-      "version": "0.1.2"
+      "version": "0.1.2",
+      "user": {
+        "name": "[username]",
+        "type": "[solaceClientUsername or solaceClientCertificateUsername or solaceAuthorizationGroup]"
+        "password": ["only when type == solaceClientUsername"]
+      }
     },
     {
       "name": "Application_2",
       "version": "0.1.0"
+      "user": {
+        "name": "[username]",
+        "type": "[solaceClientUsername or solaceClientCertificateUsername or solaceAuthorizationGroup]"
+        "password": ["only when type == solaceClientUsername"]
+      }
     }
   ],
   "brokers": [ {
@@ -339,22 +375,20 @@ config/tst.json
     {
       "name": "Application_1",
       "version": "0.1.1",
-      "users": [
-        {
-          "name": "app-1-user",
-          "password": "app-1-pwd"
-        }
-      ]
+      "user": {
+        "name": "[username]",
+        "type": "[solaceClientUsername or solaceClientCertificateUsername or solaceAuthorizationGroup]"
+        "password": ["only when type == solaceClientUsername"]
+      }
     },
     {
       "name": "Application_2",
       "version": "0.1.0",
-      "users": [
-        {
-          "name": "app-2-user",
-          "password": "app-2-pwd"
-        }
-      ]
+      "user": {
+        "name": "[username]",
+        "type": "[solaceClientUsername or solaceClientCertificateUsername or solaceAuthorizationGroup]"
+        "password": ["only when type == solaceClientUsername"]
+      }
     }
   ],
   "brokers": [ {
@@ -386,16 +420,16 @@ runAction --mode configPush --action=undeploy --target=tst
 ```
 Check if acls, clientUsernames and queues are removed
 
-### SempDeploy
+### Semp Deployment
 Deploy version to Test
 ```shell
-runAction --mode sempDeploy --action=deploy --target=tst
+runAction --mode semp --action=deploy --target=tst
 ```
 Check on the Test broker if acl, clientUsernames and Queues are created
 
 Undeploy version from Test
 ```
-runAction --mode sempDeploy --action=undeploy --target=tst
+runAction --mode semp --action=undeploy --target=tst
 ```
 Check if acls, clientUsernames and queues are removed
 

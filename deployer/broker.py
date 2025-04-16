@@ -21,21 +21,13 @@ class Broker:
         response = self.api("GET", url)
         logging.info(f"RESPONSE={response}")
 
-    # There is usually only 1 aclProfile when executing a deployment
-    def create_acl_profiles(self, solace_acl_profiles, app_name):
-        logging.info(f"Create ACL Profiles for {app_name}")
-        profile_name = []
-        for index, acl_profile in enumerate(solace_acl_profiles):
-            profile_name.append(self.create_acl_profile(index, acl_profile, app_name))
-        return profile_name[0]
-
-    def create_acl_profile(self, index, acl_profile, app_name):
+    def create_acl_profile(self, acl_profile, app_name):
         url = f"msgVpns/{ self.msg_vpn_name }/aclProfiles"
         profile = acl_profile["aclProfile"]
         profile["msgVpnName"] = self.msg_vpn_name
         #profile["aclProfileName"] = f"app-{ app_name.lower() }_{index}" if profile["aclProfileName"].startswith("app-") else profile["aclProfileName"]
         logging.debug(f"POST { url } payload { profile}")
-        logging.info(f"Create ACL-Profile '{profile["aclProfileName"]}' on messageVPN '{self.msg_vpn_name}'")
+        logging.info(f"Create ACL-Profile '{profile["aclProfileName"]}' for Application {app_name} on messageVPN '{self.msg_vpn_name}'")
         self.api("POST", url, json=profile)
         publish_topic_exceptions = acl_profile["publishTopicExceptions"]
         for exception in publish_topic_exceptions:
@@ -43,7 +35,6 @@ class Broker:
         subscribe_topic_exceptions = acl_profile["subscribeTopicExceptions"]
         for exception in subscribe_topic_exceptions:
             self.create_acl_subscribe_exception(profile["aclProfileName"], exception)
-        return profile["aclProfileName"]
 
     def create_acl_publish_exception(self, profileName, exception):
         url = f"msgVpns/{ self.msg_vpn_name }/aclProfiles/{profileName}/publishTopicExceptions"
@@ -69,26 +60,50 @@ class Broker:
         logging.debug(f"POST { url } payload { payload }")
         self.api("POST", url, json=payload)
 
-    def create_client_usernames(self, solace_client_usernames, acl_profile_name, config):
-        logging.info(f"Create Client Usernames")
-        for user in config.get("users"):
-            self.create_client_username(user, acl_profile_name)
+    def delete_acl_profile(self, acl_profile, app_name):
+        url = f"msgVpns/{ self.msg_vpn_name }/aclProfiles"
+        profile = acl_profile["aclProfile"]
+        #acl_profile_name = f"app-{ app_name.lower() }_{index}" if profile["aclProfileName"].startswith("app-") else profile["aclProfileName"]
+        acl_profile_name = profile["aclProfileName"]
+        logging.info(f"Delete ACL Profile {acl_profile_name} for {app_name}")
+        delete_url = f"{url}/{acl_profile_name}"
+        self.api("DELETE", delete_url)
 
-    def create_client_username(self, user, acl_profile_name):
-        logging.info(f"Create Client Username")
+    def create_client_username(self, client_username, acl_profile, app_name, user):
+        logging.info(f"Create Client Username {user.get("name")} for Application {app_name}")
         url = f"msgVpns/{ self.msg_vpn_name }/clientUsernames"
-        payload = {
-            "msgVpnName": self.msg_vpn_name,
-            "aclProfileName": acl_profile_name,
-            "clientUsername": user.get("name"),
-            "password": user.get("password"),
-            "enabled": True,
-            "guaranteedEndpointPermissionOverrideEnabled": False,
-            "subscriptionManagerEnabled": False
-        }
-        logging.info(f"Create clientUsername {payload["clientUsername"]} on messageVPN {self.msg_vpn_name}")
-        logging.debug(f"POST { url } payload { payload }")
-        self.api("POST", url, json=payload)
+        client_username["msgVpnName"] = self.msg_vpn_name
+        client_username["aclProfileName"] = acl_profile["aclProfileName"]
+        client_username["clientUsername"] =  user.get("name")
+        if user.get("type") == "solaceClientUsername":
+            client_username["password"] = user.get("password")
+        logging.info(f"Create clientUsername {client_username["clientUsername"]} on messageVPN {self.msg_vpn_name}")
+        logging.debug(f"POST { url } payload { client_username }")
+        self.api("POST", url, json=client_username)
+
+    def delete_client_username(self, client_username, user, app_name):
+        url = f"msgVpns/{ self.msg_vpn_name }/clientUsernames"
+        client_name = user["name"]
+        delete_url = f"{url}/{client_name}"
+        logging.info(f"Delete client name { client_name } for Application {app_name}")
+        self.api("DELETE", delete_url)
+
+    def create_authorization_group(self, authorization_group, acl_profile, app_name, group):
+        logging.info(f"Create Authentication Group {group.get("name")} for Application {app_name}")
+        url = f"msgVpns/{ self.msg_vpn_name }/authorizationGroups"
+        authorization_group["msgVpnName"] = self.msg_vpn_name
+        authorization_group["aclProfileName"] = acl_profile["aclProfileName"]
+        authorization_group["authorizationGroupName"] = group.get("name")
+        logging.info(f"Create authorizationGroup  {authorization_group["authorizationGroupName"]} on messageVPN {self.msg_vpn_name}")
+        logging.debug(f"POST { url } payload { authorization_group }")
+        self.api("POST", url, json=authorization_group)
+
+    def delete_authorization_group(self, authorization_group, group, app_name):
+        url = f"msgVpns/{ self.msg_vpn_name }/authorizationGroups"
+        authorization_group_name = group.get("name")
+        delete_url = f"{url}/{authorization_group_name}"
+        logging.info(f"Delete Authorization Group {authorization_group_name} for Application {app_name}")
+        self.api("DELETE", delete_url)
 
     def create_queues(self, solace_queues):
         logging.info(f"Create Queues")
@@ -123,34 +138,9 @@ class Broker:
         url = f"msgVpns/{ self.msg_vpn_name }/queues"
         configuration = queue["queueConfiguration"]
         queue_name = configuration["queueName"]
+        logging.info(f"Delete Queue {queue_name}")
         delete_url = f"{url}/{queue_name}"
         logging.info(f"Delete queue { queue_name }")
-        self.api("DELETE", delete_url)
-
-    def delete_client_usernames(self, solace_client_usernames, config):
-        logging.info(f"Delete Client Usernames")
-        for user in config.get("users"):
-            self.delete_client_username(user)
-
-    def delete_client_username(self, user):
-        url = f"msgVpns/{ self.msg_vpn_name }/clientUsernames"
-        client_name = user["name"]
-        delete_url = f"{url}/{client_name}"
-        logging.info(f"Delete client name { client_name }")
-        self.api("DELETE", delete_url)
-
-    def delete_acl_profiles(self, solace_acl_profiles, app_name):
-        logging.info(f"Delete ACL Profiles for {app_name}")
-        for index, acl_profile in enumerate(solace_acl_profiles):
-            self.delete_acl_profile(index, acl_profile)
-
-    def delete_acl_profile(self, index, acl_profile):
-        url = f"msgVpns/{ self.msg_vpn_name }/aclProfiles"
-        profile = acl_profile["aclProfile"]
-        #acl_profile_name = f"app-{ app_name.lower() }_{index}" if profile["aclProfileName"].startswith("app-") else profile["aclProfileName"]
-        acl_profile_name = profile["aclProfileName"]
-        delete_url = f"{url}/{acl_profile_name}"
-        logging.info(f"Delete ACL profile { acl_profile_name }")
         self.api("DELETE", delete_url)
 
     def api(self, method, endpoint, **kwargs):

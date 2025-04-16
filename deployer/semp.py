@@ -29,6 +29,9 @@ def execute(config, action, broker_cfgs, preview, app_name):
     logging.debug(f"Deploying { config } to brokers { broker_cfgs }")
     selector = 'requested'# if action == 'deploy' else 'existing'
     solace_client_usernames = get_path_expr(preview, f"$..{selector}[?(@.type=='solaceClientUsername')].value")
+    solace_client_certificate_usernames = get_path_expr(preview, f"$..{selector}[?( @.type=='solaceClientCertificateUsername')].value")
+    client_usernames = solace_client_usernames + solace_client_certificate_usernames
+    solace_authorization_groups =  get_path_expr(preview, f"$..{selector}[?(@.type=='solaceAuthorizationGroup')].value")
     solace_acl_profiles = get_path_expr(preview, f"$..{selector}[?(@.type=='solaceAcl')].value")
     solace_queues = get_path_expr(preview, f"$..{selector}[?(@.type=='solaceQueue')].value")
     for cfg in broker_cfgs:
@@ -39,11 +42,17 @@ def execute(config, action, broker_cfgs, preview, app_name):
         pwd = cfg["password"]
         broker = Broker(broker_name, base_url, user, pwd, msg_vpn_name)
         if action == 'deploy':
-            acl_profile_name = broker.create_acl_profiles( solace_acl_profiles, app_name) # always just 1 profile
-            broker.create_client_usernames(solace_client_usernames, acl_profile_name, config) # possible multi?
+            broker.create_acl_profile( solace_acl_profiles[0], app_name) # always just 1 profile
+            if client_usernames:
+                broker.create_client_username(client_usernames[0], solace_acl_profiles[0].get("aclProfile"), app_name, config.get("user"))# possible multi?
+            if solace_authorization_groups:
+                broker.create_authorization_group(solace_authorization_groups[0], solace_acl_profiles[0].get("aclProfile"), app_name, config.get("user"))
             broker.create_queues(solace_queues)
         else:
             broker.delete_queues(solace_queues)
-            broker.delete_client_usernames(solace_client_usernames, config)
-            broker.delete_acl_profiles(solace_acl_profiles, app_name)
+            if client_usernames:
+                broker.delete_client_username(client_usernames[0], config.get("user"), app_name)
+            if solace_authorization_groups:
+                broker.delete_authorization_group(solace_authorization_groups[0], config.get("user"), app_name)
+            broker.delete_acl_profile(solace_acl_profiles[0], app_name)
 
