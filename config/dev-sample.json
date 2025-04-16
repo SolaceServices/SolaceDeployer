@@ -1,0 +1,37 @@
+{
+  "environment": "dev",
+  "environmentName": "Dev",
+  "meshName": "meshName-dev",
+  "domainName": "domainName",
+  "applications": [
+    {
+      "name": "Application_1",
+      "version": "0.1.0",
+      "users": [
+        {
+          "name": "app-1-user",
+          "password": "app1-pwd"
+        }
+      ]
+    },
+    {
+      "name": "Application_2",
+      "version": "0.1.0",
+      "users": [
+        {
+          "name": "app-2-user",
+          "password": "app-2-pwd"
+        }
+      ]
+    }
+  ],
+  "brokers": [
+    {
+      "name": "broker_1",
+      "url": "https://mr-connection-[brokerId].messaging.solace.cloud:943/SEMP/v2/config",
+      "user": "mission-control-manager",
+      "password": "<secret>",
+      "msgVpnName": "msgVpnName"
+    }
+  ]
+}

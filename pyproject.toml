@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=75.3.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "SolaceDeployer"
+dependencies = [
+    "requests>=2.32.3",
+    "jsonpath-ng>=1.7.0"
+]
+authors = [{name = "Peter Kester", email = "peter.kester@solace.com"}]
+keywords = ["CloudAPI", "Deployments", "CICD"]
+readme = {file = "README.md", content-type = "text/markdown"}
+requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache 2.0",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dynamic = ["version"]
+
+[project.urls]
+Repository = "https://github.com/SolaceServices/SolaceDeployer.git"
+Issues = "https://github.com/SolaceServices/SolaceDeployer/issues"
+
+[project.optional-dependencies]
+dev = ["build", "twine"]
+
+[project.scripts]
+runAction = "deployer.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.dynamic]
+version = {attr = "deployer.__version__"}

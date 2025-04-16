@@ -1,0 +1,35 @@
+{
+  "environment": "tst",
+  "environmentName": "Test",
+  "meshName": "meshName-test",
+  "domainName": "EXS-Chauffeurs",
+  "applications": [
+    {
+      "name": "MENDIX",
+      "version": "0.1.2",
+      "users": [
+        {
+          "name": "mendix",
+          "password": "mendix-tst"
+        }
+      ]
+    },
+    {
+      "name": "SAP26",
+      "version": "0.1.1",
+      "users": [
+        {
+          "name": "sap26",
+          "password": "sap26-tst"
+        }
+      ]
+    }
+  ],
+  "brokers": [ {
+    "name": "Enexis-TST",
+    "url": "https://mr-connection-3kow6eoyryg.messaging.solace.cloud:943/SEMP/v2/config",
+    "user": "mission-control-manager",
+    "password": "qeldvul82n825kvhe27bva90u0",
+    "msgVpnName": "enexis"
+  }]
+}
