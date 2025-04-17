@@ -1,0 +1,4 @@
+{
+  "baseUrl": "https://api.solace.cloud/api/v2",
+  "token": "[API-Token with sufficient permissions]"
+}
