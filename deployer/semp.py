@@ -47,7 +47,7 @@ def execute(config, action, broker_cfgs, preview, app_name):
                 broker.create_client_username(client_usernames[0], solace_acl_profiles[0].get("aclProfile"), app_name, config.get("user"))# possible multi?
             if solace_authorization_groups:
                 broker.create_authorization_group(solace_authorization_groups[0], solace_acl_profiles[0].get("aclProfile"), app_name, config.get("user"))
-            broker.create_queues(solace_queues)
+            broker.create_queues(solace_queues, config.get("user"))
         else:
             broker.delete_queues(solace_queues)
             if client_usernames:

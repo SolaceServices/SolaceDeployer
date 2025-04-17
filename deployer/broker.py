@@ -21,14 +21,25 @@ class Broker:
         response = self.api("GET", url)
         logging.info(f"RESPONSE={response}")
 
+    def acl_profile_exists(self, profile_name):
+        url = f"msgVpns/{ self.msg_vpn_name }/aclProfiles/{profile_name}"
+        response = self.api("GET", url)
+        meta = response["meta"]
+        return meta["responseCode"] == 200
+
     def create_acl_profile(self, acl_profile, app_name):
         url = f"msgVpns/{ self.msg_vpn_name }/aclProfiles"
         profile = acl_profile["aclProfile"]
         profile["msgVpnName"] = self.msg_vpn_name
+        profile_name = profile["aclProfileName"]
         #profile["aclProfileName"] = f"app-{ app_name.lower() }_{index}" if profile["aclProfileName"].startswith("app-") else profile["aclProfileName"]
-        logging.debug(f"POST { url } payload { profile}")
-        logging.info(f"Create ACL-Profile '{profile["aclProfileName"]}' for Application {app_name} on messageVPN '{self.msg_vpn_name}'")
-        self.api("POST", url, json=profile)
+        logging.info(f"Create ACL-Profile '{profile_name}' for Application {app_name} on messageVPN '{self.msg_vpn_name}'")
+        if self.acl_profile_exists(profile_name):
+            logging.debug(f"Patch {url}/{profile_name} payload { profile }")
+            self.api("PATCH", f"{url}/{profile_name}", json=profile)
+        else:
+            logging.debug(f"POST { url } payload { profile}")
+            self.api("POST", url, json=profile)
         publish_topic_exceptions = acl_profile["publishTopicExceptions"]
         for exception in publish_topic_exceptions:
             self.create_acl_publish_exception(profile["aclProfileName"], exception)
@@ -69,17 +80,28 @@ class Broker:
         delete_url = f"{url}/{acl_profile_name}"
         self.api("DELETE", delete_url)
 
+    def client_username_exists(self, user_name):
+        url = f"msgVpns/{ self.msg_vpn_name }/clientUsernames/{user_name}"
+        response = self.api("GET", url)
+        meta = response["meta"]
+        return meta["responseCode"] == 200
+
     def create_client_username(self, client_username, acl_profile, app_name, user):
         logging.info(f"Create Client Username {user.get("name")} for Application {app_name}")
         url = f"msgVpns/{ self.msg_vpn_name }/clientUsernames"
+        user_name =  user.get("name")
         client_username["msgVpnName"] = self.msg_vpn_name
         client_username["aclProfileName"] = acl_profile["aclProfileName"]
-        client_username["clientUsername"] =  user.get("name")
+        client_username["clientUsername"] =  user_name
         if user.get("type") == "solaceClientUsername":
             client_username["password"] = user.get("password")
-        logging.info(f"Create clientUsername {client_username["clientUsername"]} on messageVPN {self.msg_vpn_name}")
-        logging.debug(f"POST { url } payload { client_username }")
-        self.api("POST", url, json=client_username)
+        logging.info(f"Create clientUsername {user_name} on messageVPN {self.msg_vpn_name}")
+        if self.client_username_exists(user_name):
+            logging.debug(f"PATCH { url } payload { client_username }")
+            self.api("PATCH", f"{url}/{user_name}", json=client_username)
+        else:
+            logging.debug(f"POST { url } payload { client_username }")
+            self.api("POST", url, json=client_username)
 
     def delete_client_username(self, client_username, user, app_name):
         url = f"msgVpns/{ self.msg_vpn_name }/clientUsernames"
@@ -88,15 +110,26 @@ class Broker:
         logging.info(f"Delete client name { client_name } for Application {app_name}")
         self.api("DELETE", delete_url)
 
+    def authorization_group_exists(self, group_name):
+        url = f"msgVpns/{ self.msg_vpn_name }/authorizationGroups/{group_name}"
+        response = self.api("GET", url)
+        meta = response["meta"]
+        return meta["responseCode"] == 200
+
     def create_authorization_group(self, authorization_group, acl_profile, app_name, group):
         logging.info(f"Create Authentication Group {group.get("name")} for Application {app_name}")
         url = f"msgVpns/{ self.msg_vpn_name }/authorizationGroups"
+        group_name = group.get("name")
         authorization_group["msgVpnName"] = self.msg_vpn_name
         authorization_group["aclProfileName"] = acl_profile["aclProfileName"]
-        authorization_group["authorizationGroupName"] = group.get("name")
-        logging.info(f"Create authorizationGroup  {authorization_group["authorizationGroupName"]} on messageVPN {self.msg_vpn_name}")
-        logging.debug(f"POST { url } payload { authorization_group }")
-        self.api("POST", url, json=authorization_group)
+        authorization_group["authorizationGroupName"] = group_name
+        logging.info(f"Create authorizationGroup  {group_name} on messageVPN {self.msg_vpn_name}")
+        if self.authorization_group_exists(group_name):
+            logging.debug(f"PATCH { url } payload { authorization_group }")
+            self.api("PATCH", f"{url}/{group_name}", json=authorization_group)
+        else:
+            logging.debug(f"POST { url } payload { authorization_group }")
+            self.api("POST", url, json=authorization_group)
 
     def delete_authorization_group(self, authorization_group, group, app_name):
         url = f"msgVpns/{ self.msg_vpn_name }/authorizationGroups"
@@ -105,19 +138,30 @@ class Broker:
         logging.info(f"Delete Authorization Group {authorization_group_name} for Application {app_name}")
         self.api("DELETE", delete_url)
 
-    def create_queues(self, solace_queues):
+    def queue_exists(self, queue_name):
+        url = f"msgVpns/{ self.msg_vpn_name }/queues/{queue_name}"
+        response = self.api("GET", url)
+        meta = response["meta"]
+        return meta["responseCode"] == 200
+
+    def create_queues(self, solace_queues, owner):
         logging.info(f"Create Queues")
         for queue in solace_queues:
-            self.create_queue(queue)
+            self.create_queue(queue, owner)
 
-    def create_queue(self, queue):
+    def create_queue(self, queue, owner):
         url = f"msgVpns/{ self.msg_vpn_name }/queues"
         configuration = queue["queueConfiguration"]
         configuration["msgVpnName"] = self.msg_vpn_name
         queue_name = configuration["queueName"]
-        logging.debug(f"POST { url } payload { configuration }")
+        configuration["owner"] = owner["name"]
         logging.info(f"Create queue '{queue_name}' on messageVPN '{self.msg_vpn_name}'")
-        self.api("POST", url, json=configuration)
+        if self.queue_exists(queue_name):
+            logging.debug(f"Patch {url}/{queue_name} payload { configuration }")
+            self.api("PATCH", f"{url}/{queue_name}", json=configuration)
+        else:
+            logging.debug(f"POST { url } payload { configuration }")
+            self.api("POST", url, json=configuration)
         for subscription in queue["subscriptions"]:
             subs_url = f"{url}/{queue_name}/subscriptions"
             payload = {

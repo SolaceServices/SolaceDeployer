@@ -300,8 +300,8 @@ DELETE /msgVpns/{msgVpnName}/queues/{queueName}
 
 ## Testing it out
 
-The file _SampleDomain.json_ can be loaded into the Event Portal.
-Make sure there are at least 3 environments present [Dev, Test, Prod]
+The file _SolaceSampleDomain.json_ can be loaded into the Event Portal.
+Make sure there are at least 2 environments present [Dev, Test]
 Make sure ech environment has at least one broker running
 Create a Modeled Event mesh for each environment and note their names.
 Connect at least one Broker to each Modeled Event Mesh. This will use the Cloud EMA for that Modeled Event Mesh (if enabled)
@@ -333,30 +333,30 @@ config/dev.json
 {
   "environment": "dev",
   "environmentName": "Dev",
-  "memName": "memName",
-  "domainName": "SampleDomain",
+  "memName": "SampleMesh",
+  "domainName": "SolaceSampleDomain",
   "applications": [
     {
       "name": "Application_1",
       "version": "0.1.2",
       "user": {
-        "name": "[username]",
-        "type": "[solaceClientUsername or solaceClientCertificateUsername or solaceAuthorizationGroup]"
-        "password": ["only when type == solaceClientUsername"]
+        "name": "app1-dev",
+        "type": "solaceClientUsername"
+        "password": "app1-dev"
       }
     },
     {
       "name": "Application_2",
       "version": "0.1.0"
       "user": {
-        "name": "[username]",
-        "type": "[solaceClientUsername or solaceClientCertificateUsername or solaceAuthorizationGroup]"
-        "password": ["only when type == solaceClientUsername"]
+        "name": "app2-dev",
+        "type": "solaceClientUsername"
+        "password": "app2-dev"
       }
     }
   ],
   "brokers": [ {
-    "name": "brokerDev",
+    "name": "[dev broker name]",
     "url": "[Base path  from EP ClusterManager/Manage/SEMP-REST API]",
     "user": "[Username from EP ClusterManager/Manage/SEMP-REST API]",
     "password": "[Password from EP ClusterManager/Manage/SEMP-REST API]",
@@ -369,30 +369,30 @@ config/tst.json
 {
   "environment": "tst",
   "environmentName": "Test",
-  "memName": "memName",
-  "domainName": "SampleDomain",
+  "memName": "SampleMesh",
+  "domainName": "SolaceSampleDomain",
   "applications": [
     {
       "name": "Application_1",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "user": {
-        "name": "[username]",
-        "type": "[solaceClientUsername or solaceClientCertificateUsername or solaceAuthorizationGroup]"
-        "password": ["only when type == solaceClientUsername"]
+        "name": "app1-tst",
+        "type": "solaceClientUsername"
+        "password": "app1-tst"
       }
     },
     {
       "name": "Application_2",
-      "version": "0.1.0",
+      "version": "0.1.0"
       "user": {
-        "name": "[username]",
-        "type": "[solaceClientUsername or solaceClientCertificateUsername or solaceAuthorizationGroup]"
-        "password": ["only when type == solaceClientUsername"]
+        "name": "app2-tst",
+        "type": "solaceClientUsername"
+        "password": "app2-tst"
       }
     }
   ],
   "brokers": [ {
-    "name": "brokerTST",
+    "name": "[test broker name]",
     "url": "[Base path  from EP ClusterManager/Manage/SEMP-REST API]",
     "user": "[Username from EP ClusterManager/Manage/SEMP-REST API]",
     "password": "[Password from EP ClusterManager/Manage/SEMP-REST API]",
@@ -403,8 +403,9 @@ config/tst.json
 Make sure the Cloud EMA's are running for each environment:
 
 If these don't run you cannot use configPush
+Execute a config-push on the EventPortal for both applications on the dev broker 
 
-Now you can test both strategies:
+Now you can test both strategies for deploym,ent on tst:
 
 ### ConfigPush
 
@@ -433,8 +434,46 @@ runAction --mode semp --action=undeploy --target=tst
 ```
 Check if acls, clientUsernames and queues are removed
 
+### Test connectivity Dev environment
 
-## ToDo
+Send message to Application_1 on Dev
+```shell
+sdkperf_amqp -cip amqps://mr-connection-[dev serviceId].messaging.solace.cloud -cu app2-dev@[dev msgvpn] -cp 'app2-dev' -ptl 'topic://#P2P/QUE/Event_2MessageQueue' -msa 100 -mn 5 -mr 1
+```
 
-- Check for different broker versions in environments
-- Check for deleted objects. (possible rework on preview deployments)
+Receive messages from Application_1  on dev
+```shell
+sdkperf_java  -cip tcps://mr-connection-[dev serviceId].messaging.solace.cloud -cu app1-dev@[dev msgvpn] -cp app1-dev -sql 'Event_2MessageQueue' -md
+```
+
+Send message to Application_2 on Dev
+```shell
+sdkperf_amqp -cip amqps://mr-connection-[dev serviceId].messaging.solace.cloud -cu app1-dev@s[dev msgvpn] -cp 'app1-dev' -ptl 'topic://#P2P/QUE/Event_1MessageQueue' -msa 100 -mn 5 -mr 1
+```
+
+Receive messages from Application_2  on dev
+```shell
+sdkperf_java  -cip tcps://mr-connection-[dev serviceId].messaging.solace.cloud -cu app2-dev@[dev msgvpn] -cp app2-dev -sql 'Event_1MessageQueue' -md
+```
+
+### Test connectivity Test environment
+
+Send message to Application_1 on tst
+```shell
+sdkperf_amqp -cip amqps://mr-connection-[tst serviceId].messaging.solace.cloud -cu app2-tst@[tst msgvpn] -cp 'app2-tst' -ptl 'topic://#P2P/QUE/Event_2MessageQueue' -msa 100 -mn 5 -mr 1
+```
+
+Receive messages from Application_1  on tst
+```shell
+sdkperf_java  -cip tcps://mr-connection-[tst serviceId].messaging.solace.cloud -cu app1-tst@[tst msgvpn] -cp app1-tst -sql 'Event_2MessageQueue' -md
+```
+
+Send message to Application_2 on tst
+```shell
+sdkperf_amqp -cip amqps://mr-connection-[tst serviceId].messaging.solace.cloud -cu app1-tst@s[tst msgvpn] -cp 'app1-tst' -ptl 'topic://#P2P/QUE/Event_1MessageQueue' -msa 100 -mn 5 -mr 1
+```
+
+Receive messages from Application_2  on tst
+```shell
+sdkperf_java  -cip tcps://mr-connection-[tst serviceId].messaging.solace.cloud -cu app2-tst@[tst msgvpn] -cp app2-tst -sql 'Event_1MessageQueue' -md
+```
