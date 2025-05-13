@@ -4,6 +4,7 @@ from deployer.errors import EventPortalException
 from deployer.event_portal import EventPortal
 from deployer.event_portal import get_path_expr
 from deployer.broker import Broker
+from datetime import date
 
 def semp(parameters):
     logging.debug(f"Running semp with parameters { parameters }")
@@ -12,18 +13,23 @@ def semp(parameters):
         raise TypeError("Expect an EventPortal instance")
     # get the preview from src
     broker_id = parameters.get("broker_ids")[0]
-    applications = parameters.get("target").get("applications")
     action = parameters["action"]
     target = parameters["target"]
+    environment_name = target.get("environment")
     broker_configs = target["brokers"]
-    for application in [app for app in applications if app["versionId"]]:
-        version_id = application["versionId"]
-        logging.info(f"{action.capitalize()} application: { application["name"] } with version { application["version"] } and id { application["versionId"] }")
-        try:
-            preview = ep.preview_application_deployment(version_id, "deploy", broker_id)
-            execute(application, action, broker_configs, preview, application["name"])
-        except EventPortalException as ex:
-            logging.error(f"semp_deploy::Exception::{ex}")
+    for domain in parameters.get("target").get("domains"):
+        domain_name = domain.get("domainName")
+        applications = domain.get("applications")
+        for application in [app for app in applications if app["versionId"]]:
+            application_name = application.get("name")
+            version_id = application["versionId"]
+            logging.info(f"{action.capitalize()} application: { application["name"] } with version { application["version"] } and id { application["versionId"]} in domain {domain.get("domainName")}")
+            try:
+                preview = ep.preview_application_deployment(version_id, "deploy", broker_id)
+                print(f"Store preview for {environment_name}/{domain_name}/{application_name}/{date.today()}/preview.json")
+                execute(application, action, broker_configs, preview, application["name"])
+            except EventPortalException as ex:
+                logging.error(f"semp_deploy::Exception::{ex}")
 
 def execute(config, action, broker_cfgs, preview, app_name):
     logging.debug(f"Deploying { config } to brokers { broker_cfgs }")

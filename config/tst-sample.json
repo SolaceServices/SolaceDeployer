@@ -2,25 +2,29 @@
   "environment": "tst",
   "environmentName": "Test",
   "meshName": "meshName-test",
-  "domainName": "sampleDomain",
-  "applications": [
+  "domains": [
     {
-      "name": "Application_1",
-      "version": "0.1.0",
-      "user": {
-        "name": "appl-1-user-tst",
-        "type": "solaceClientUsername",
-        "password": "appl-1-pwd-tst"
-      }
-    },
-    {
-      "name": "Application_2",
-      "version": "0.1.0",
-      "user": {
-        "name": "appl-2-user-tst",
-        "type": "solaceClientUsername",
-        "password": "appl-2-pwd-tst"
-      }
+      "domainName": "SolaceSampleDomain",
+      "applications": [
+        {
+          "name": "Application_1",
+          "version": "0.1.0",
+          "user": {
+            "name": "app1-tst",
+            "type": "solaceClientUsername",
+            "password": "app1-tst"
+          }
+        },
+        {
+          "name": "Application_2",
+          "version": "0.1.0",
+          "user": {
+            "name": "app2-tst",
+            "type": "solaceClientUsername",
+            "password": "app2-tst"
+          }
+        }
+      ]
     }
   ],
   "brokers": [ {

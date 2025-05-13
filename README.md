@@ -39,17 +39,18 @@ There are 2 CICD strategies possible.
 
 #### Steps to execute for a deployment:
 
-1. Get the predefined values for an environment: environmentName, modeledEventMeshName, applicationDomainName, applicationName(s) and its applicationVersion(s) to deploy
+1. Get the predefined values for an environment: environmentName, modeledEventMeshName, applicationDomainName(s), applicationName(s) and its applicationVersion(s) to deploy
 2. Get the environmentId of the target environment: GET /api/v2/architecture/environments, extract the environmentId (id) from the response where name === {{environmentName}}
 3. Get the meshId in the target environment: GET /api/v2/architecture/eventMeshes?environmentId={{environmentId}}, extract the meshId (id) from the response where name == {{modeledEventMeshName}}
 4. Get the connected brokerIds: GET /api/v2/architecture/messagingServices?eventMeshId={{MeshId}}, extract the broker ids (data?.id)
-5. Get the applicationDomainId: GET /api/v2/architecture/applicationDomains?name={{applicationDomainName}}, extract the applicationDomainId (id) from the response
-6. For each applicationName:
-    1. Get the applicationId: GET /api/v2/architecture/applications?applicationDomainId={{applicationDomainId}}, extract the applicationId (id) where name === {{applicationName}}
-    2. get the applicationVersionId: GET /api/v2/architecture/applicationVersions?applicationIds={{applicationId}}, extract the applicationVersionId (id) where version === {{applicationVersion}}
-    3. For each brokerId from step 4:
-        1. Deploy applicationVersionId: POST /api/v2/architecture/runtimeManagement/applicationDeployments with body:
-           { "applicationVersionId":  "{{applicationVersionId}}", "action": "deploy", "eventBrokerId": "{{brokerId}}
+5. For each application domain:
+   1. Get the applicationDomainId: GET /api/v2/architecture/applicationDomains?name={{applicationDomainName}}, extract the applicationDomainId (id) from the response
+   2. For each applicationName:
+       1. Get the applicationId: GET /api/v2/architecture/applications?applicationDomainId={{applicationDomainId}}, extract the applicationId (id) where name === {{applicationName}}
+       2. get the applicationVersionId: GET /api/v2/architecture/applicationVersions?applicationIds={{applicationId}}, extract the applicationVersionId (id) where version === {{applicationVersion}}
+       3. For each brokerId from step 4:
+           1. Deploy applicationVersionId: POST /api/v2/architecture/runtimeManagement/applicationDeployments with body:
+              { "applicationVersionId":  "{{applicationVersionId}}", "action": "deploy", "eventBrokerId": "{{brokerId}}
 
 
 ### Pull Config from portal and push to environment with SEMP via CICD pipeline
@@ -72,12 +73,13 @@ There are 2 CICD strategies possible.
 3. Get the dev environmentId: GET /api/v2/architecture/environments, extract the environmentId (id) from the response where name === {{environmentName}}
 4. Get the meshId for the environment: GET /api/v2/architecture/eventMeshes?environmentId={{environmentId}}, extract the meshId (id) from the response where name == {{modeledEventMeshName}}
 5. Get one of the connected brokers: GET /api/v2/architecture/messagingServices?eventMeshId={{meshId}}, extract the brokerId and the msgVpnName ($..msgVpn)
-6. Get the applicationDomainId: GET /api/v2/architecture/applicationDomains?name={{applicationDomainName}}, extract the applicationDomainId (id) from the response
-7. For each applicationName:
-    1. Get the applicationId: GET /api/v2/architecture/applications?applicationDomainId={{applicationDomainId}}, extract the applicationId (id) where name == {{applicationName}}
-    2. get the applicationVersionId: GET /api/v2/architecture/applicationVersions?applicationIds={{applicationId}}, extract the applicationVersionId (id) where version == {{applicationVersion}}
-    3. Create a preview applicationVersionId: POST /api/v2/architecture/runtimeManagement/applicationDeployments with body:
-      { "applicationVersionId":  "{{applicationVersionId}}", "action": "deploy or undeploy", "eventBrokerId": "{{brokerId}}
+6. For each application domain:
+    1. Get the applicationDomainId: GET /api/v2/architecture/applicationDomains?name={{applicationDomainName}}, extract the applicationDomainId (id) from the response
+    2. For each applicationName:
+       1. Get the applicationId: GET /api/v2/architecture/applications?applicationDomainId={{applicationDomainId}}, extract the applicationId (id) where name == {{applicationName}}
+       2. get the applicationVersionId: GET /api/v2/architecture/applicationVersions?applicationIds={{applicationId}}, extract the applicationVersionId (id) where version == {{applicationVersion}}
+       3. Create a preview applicationVersionId: POST /api/v2/architecture/runtimeManagement/applicationDeployments with body:
+         { "applicationVersionId":  "{{applicationVersionId}}", "action": "deploy or undeploy", "eventBrokerId": "{{brokerId}}
 
 This will return a json file containing the new (requested) configuration and the original (existing) configuration for the application version.
 The new (requested) configuration will  be used for deployment and the original (existing) configuration willnbe used for undeployment)
@@ -95,9 +97,10 @@ These have to be transformed to appropriate patch commands for the SEMP/v2 API o
 
 The Solace ACL section is translated into 3 separate SEMP/V2 calls for create and one for delete:
 1. Create aclProfile: POST /msgVpns/{msgVpnName}/aclProfiles
-2. Create subscribeTopicExceptions: POST /msgVpns/{msgVpnName}/aclProfiles/{aclProfileName}/subscribeTopicExceptions
-3. Create publishTopicExceptions: POST /msgVpns/{msgVpnName}/aclProfiles/{aclProfileName}/publishTopicExceptions
-4. Delete aclProfile: DELETE /msgVpns/{msgVpnName}/aclProfiles/{aclProfileName}
+2. Create clientConnectExceptions: POST /msgVpns/{msgVpnName}/aclProfiles/{aclProfileName}/clientConnectExceptions (Not yet supported in the Portal)
+3. Create subscribeTopicExceptions: POST /msgVpns/{msgVpnName}/aclProfiles/{aclProfileName}/subscribeTopicExceptions
+4. Create publishTopicExceptions: POST /msgVpns/{msgVpnName}/aclProfiles/{aclProfileName}/publishTopicExceptions
+5. Delete aclProfile: DELETE /msgVpns/{msgVpnName}/aclProfiles/{aclProfileName}
 
 **Create aclProfile:**
 
@@ -124,7 +127,7 @@ Determine the aclProfileName with _$..requested[?(@.type=='solaceAcl')].value.ac
 For each entry in : _$..requested[?(@.type=='solaceAcl')].value.subscribeTopicExceptions_
 
 POST /msgVpns/{msgVpnName}/aclProfiles/{aclProfileName}/subscribeTopicExceptions
-
+For now only support for SMF syntax
 Body:
 ```
 {
@@ -141,7 +144,7 @@ Determine the aclProfileName with _$..requested[?(@.type=='solaceAcl')].value.ac
 For each entry in : _$..requested[?(@.type=='solaceAcl')].value.publishTopicExceptions_  
 
 POST /msgVpns/{msgVpnName}/aclProfiles/{aclProfileName}/publishTopicExceptions
-
+For now only support for SMF syntax
 Body:
 ```
 {
@@ -334,25 +337,29 @@ config/dev.json
   "environment": "dev",
   "environmentName": "Dev",
   "memName": "SampleMesh",
-  "domainName": "SolaceSampleDomain",
-  "applications": [
+  "domains": [
     {
-      "name": "Application_1",
-      "version": "0.1.2",
-      "user": {
-        "name": "app1-dev",
-        "type": "solaceClientUsername"
-        "password": "app1-dev"
-      }
-    },
-    {
-      "name": "Application_2",
-      "version": "0.1.0"
-      "user": {
-        "name": "app2-dev",
-        "type": "solaceClientUsername"
-        "password": "app2-dev"
-      }
+      "domainName": "SolaceSampleDomain",
+      "applications": [
+        {
+          "name": "Application_1",
+          "version": "0.1.2",
+          "user": {
+            "name": "app1-dev",
+            "type": "solaceClientUsername"
+            "password": "app1-dev"
+          }
+        },
+        {
+          "name": "Application_2",
+          "version": "0.1.0"
+          "user": {
+            "name": "app2-dev",
+            "type": "solaceClientUsername"
+            "password": "app2-dev"
+          }
+        }
+      ]
     }
   ],
   "brokers": [ {
@@ -370,25 +377,29 @@ config/tst.json
   "environment": "tst",
   "environmentName": "Test",
   "memName": "SampleMesh",
-  "domainName": "SolaceSampleDomain",
-  "applications": [
+  "domains":[
     {
-      "name": "Application_1",
-      "version": "0.1.2",
-      "user": {
-        "name": "app1-tst",
-        "type": "solaceClientUsername"
-        "password": "app1-tst"
-      }
-    },
-    {
-      "name": "Application_2",
-      "version": "0.1.0"
-      "user": {
-        "name": "app2-tst",
-        "type": "solaceClientUsername"
-        "password": "app2-tst"
-      }
+      "domainName": "SolaceSampleDomain",
+      "applications": [
+        {
+          "name": "Application_1",
+          "version": "0.1.2",
+          "user": {
+            "name": "app1-tst",
+            "type": "solaceClientUsername"
+            "password": "app1-tst"
+          }
+        },
+        {
+          "name": "Application_2",
+          "version": "0.1.0"
+          "user": {
+            "name": "app2-tst",
+            "type": "solaceClientUsername"
+            "password": "app2-tst"
+          }
+        }
+      ]
     }
   ],
   "brokers": [ {

@@ -2,25 +2,29 @@
   "environment": "dev",
   "environmentName": "Dev",
   "meshName": "meshName-dev",
-  "domainName": "domainName",
-  "applications": [
+  "domains":[
     {
-      "name": "Application_1",
-      "version": "0.1.0",
-      "user": {
-        "name": "app-1-user",
-        "type": "solaceClientUsername",
-        "password": "app1-pwd"
-      }
-    },
-    {
-      "name": "Application_2",
-      "version": "0.1.0",
-      "user": {
-        "name": "app-2-user",
-        "type": "solaceClientUsername",
-        "password": "app-2-pwd"
-      }
+      "domainName": "SolaceSampleDomain",
+      "applications": [
+        {
+          "name": "Application_1",
+          "version": "0.1.0",
+          "user": {
+            "name": "app1-dev",
+            "type": "solaceClientUsername",
+            "password": "app1-dev"
+          }
+        },
+        {
+          "name": "Application_2",
+          "version": "0.1.0",
+          "user": {
+            "name": "app2-dev",
+            "type": "solaceClientUsername",
+            "password": "app2-dev"
+          }
+        }
+      ]
     }
   ],
   "brokers": [

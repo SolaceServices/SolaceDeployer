@@ -46,7 +46,7 @@ def run():
 def get_parameters(arguments):
     mode = arguments.mode
     action = arguments.action if arguments.action else Action.DEPLOY.value
-    apps = [item.strip() for item in arguments.appl.split(",")] if arguments.appl else None
+    apps = arguments.appl
     config_loader = ConfigLoader()
 
     preview_config = config_loader.load_config(Environment.DEV.value)
@@ -78,20 +78,31 @@ def get_parameters(arguments):
 
     broker_ids = ep.get_messaging_services_ids(mesh_id)
     logging.debug(f"brokerIds: { broker_ids }")
+    if apps:
+        filter_map = {}
+        for item in apps:
+            filter_map.update(item)
+        domains_to_keep = []
+        for domain in target_config["domains"]:
+            domain_name = domain["domainName"]
+            if domain_name in filter_map:
+                allowed_apps = filter_map[domain_name]
+                domain["applications"] = [
+                    app for app in domain["applications"] if app["name"] in allowed_apps
+                ]
+                if domain["applications"]:
+                    domains_to_keep.append(domain)
+        target_config["domains"] = domains_to_keep
 
-    domain_id = ep.get_application_domain_id(target_config["domainName"])
-    target_config["domainId"] = domain_id
-    logging.debug(f"applicationDomain: { domain_id }")
-    # Gets the application(s) to perform the action on, defaults to all applications in the json config file
-    target_config["applications"] = [app for app in target_config["applications"] if app["name"] in apps] if apps else target_config["applications"]
-
-    target_config = add_eligible_version_ids(ep, domain_id, target_config["environment"], action, mode, target_config)
+    for target_domain in target_config["domains"]:
+        domain_id = ep.get_application_domain_id(target_domain["domainName"])
+        target_domain["domainId"] = domain_id
+        logging.debug(f"applicationDomain: { domain_id }")
+        add_eligible_version_ids(ep, domain_id, target_config["environment"], action, mode, target_config)
     return {
         "base_url": base_url,
         "eventPortal": ep,
         "action": action,
-        "dev": preview_config,
-        "config": target_config,
         "preview": preview_config,
         "target": target_config,
         "environment_id": environment_id,
@@ -103,21 +114,21 @@ def add_eligible_version_ids(ep, domain_id, env, action, mode, parameters):
     if not isinstance(ep, EventPortal):
         raise TypeError("Expect an EventPortal instance")
 
-    for application in parameters.get("applications",[]):
-        app_name = application["name"]
-        version_name = application["version"]
-        logging.debug(f"Get eligible versions for application { app_name }")
-        application_id = ep.get_application_id_by_name(domain_id, app_name)
-        application["applicationId"] = application_id
-        application_version = ep.get_application_version_object_by_name(application_id, version_name)
-        logging.debug(f"applicationVersion= { application_version }")
-        if application_version is None:
-            raise Exception({"code": "NOT_EXIST", "message": f"App { app_name } version { version_name } does not exist in environment { env }"})
-        if is_version_eligible(env, app_name, action, mode, application_version):
-            application["versionId"]=application_version["id"]
-        else:
-            logging.info(f"App { app_name } version {application_version.get('version')} not eligible for env { env }")
-    return parameters
+    for domain in parameters.get("domains"):
+        for application in domain.get("applications",[]):
+            app_name = application["name"]
+            version_name = application["version"]
+            logging.debug(f"Get eligible versions for application { app_name }")
+            application_id = ep.get_application_id_by_name(domain_id, app_name)
+            application["applicationId"] = application_id
+            application_version = ep.get_application_version_object_by_name(application_id, version_name)
+            logging.debug(f"applicationVersion= { application_version }")
+            if application_version is None:
+                raise Exception({"code": "NOT_EXIST", "message": f"App { app_name } version { version_name } does not exist in environment { env }"})
+            if is_version_eligible(env, app_name, action, mode, application_version):
+                application["versionId"]=application_version["id"]
+            else:
+                logging.info(f"App { app_name } version {application_version.get('version')} not eligible for env { env }")
 
 def is_version_eligible(env, app_name, action, mode, version):
     logging.debug(f"Check if application { app_name } version { version.get("version") } with state { version.get("stateId") } is eligible for the given mode { mode } and action { action } in environment { env }")
@@ -133,4 +144,3 @@ def is_version_eligible(env, app_name, action, mode, version):
             (env in [Environment.ACC.value, Environment.PRD.value] and version.get('stateId') in ['2','3','4'] and action == Action.UNDEPLOY.value)):
         return True
     return False
-

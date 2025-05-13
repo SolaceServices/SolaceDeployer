@@ -8,7 +8,6 @@ import logging
 from jsonpath_ng.ext import parse
 
 def get_path_expr(data, path_expr):
-    logging.debug(f"path_expr = { path_expr }")
     jsonpath_expr = parse(path_expr)
     return [match.value for match in jsonpath_expr.find(data)]
 
