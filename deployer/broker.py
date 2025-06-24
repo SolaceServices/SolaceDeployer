@@ -59,7 +59,7 @@ class Broker:
                 self.create_acl_client_connect_exception(profile_name, exception)
             else:
                 logging.info(f"ConnectException {exception} already exists in ACL-profile {profile_name}...")
-            current_exceptions.remove(exception)
+            current_exceptions.remove(exception) if current_exceptions else None
         for exception in current_exceptions:
             self.delete_acl_client_connect_exception(profile_name, exception)
 
@@ -92,7 +92,7 @@ class Broker:
                 self.create_acl_publish_topic_exception(profile_name, exception)
             else:
                 logging.info(f"PublishTopicException {exception} already exists in ACL-profile {profile_name}...")
-            current_exceptions.remove(exception)
+            current_exceptions.remove(exception) if current_exceptions else None
         for exception in current_exceptions:
             self.delete_acl_publish_topic_exception(profile_name, exception)
 
@@ -126,7 +126,7 @@ class Broker:
                 self.create_acl_subscribe_topic_exception(profile_name, exception)
             else:
                 logging.info(f"SubscribeTopicException {exception} already exists in ACL-profile {profile_name}...")
-            current_exceptions.remove(exception)
+            current_exceptions.remove(exception) if current_exceptions else None
         for exception in current_exceptions:
             self.delete_acl_subscribe_topic_exception(profile_name, exception)
 
@@ -274,7 +274,7 @@ class Broker:
                 self.create_queue_subscription_topic(queue_name, subscription)
             else:
                 logging.info(f"Subscription {subscription} already exists...")
-            current_subscriptions.remove(subscription)
+            current_subscriptions.remove(subscription) if current_subscriptions else None
         for subscription in current_subscriptions:
             self.delete_queue_subscription_topic(queue_name, subscription)
 
