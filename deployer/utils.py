@@ -4,6 +4,9 @@ import argparse
 import logging
 import json
 
+from datetime import date
+from pathlib import Path
+
 class ConfigLoader:
     def __init__(self, config_dir='config'):
         self.config_dir = config_dir
@@ -62,4 +65,25 @@ def load_config(file_path):
     except json.JSONDecodeError:
         logging.error(f"Error: Invalid JSON format in file '{file_path}'.")
         sys.exit(1)
+
+def preview_exists(environment_name, domain_name, application_name, version_name, state):
+    file_path = Path(f"./store/{environment_name}/{domain_name}/{application_name}/{version_name}/preview-{state}.json")
+    return file_path.exists()
+
+def get_preview(environment_name, domain_name, application_name, version_name, state):
+    file_path = Path(f"./store/{environment_name}/{domain_name}/{application_name}/{version_name}/preview-{state}.json")
+    if file_path.exists() and file_path.is_file():
+        with file_path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data
+    else:
+        raise Exception(f"File {file_path} does not exist or is not a file")
+
+def store_preview(preview, environment_name, domain_name, application_name, version_name, state):
+    logging.info(f"Store preview for { environment_name }/{ domain_name }/{ application_name }/{ version_name }/preview-{ state }.json")
+    file_path = f"./store/{ environment_name }/{ domain_name }/{ application_name }/{ version_name }/preview-{ state }.json"
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    with open(file_path, 'w') as file:
+        json.dump(preview, file, indent=2)
+
 

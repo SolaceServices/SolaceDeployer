@@ -354,9 +354,16 @@ config/dev.json
           "name": "Application_2",
           "version": "0.1.0"
           "user": {
-            "name": "app2-dev",
-            "type": "solaceClientUsername"
-            "password": "app2-dev"
+            "name": "PubSubRoleA",
+            "type": "solaceAuthorizationGroup"
+          }
+        },
+        {
+          "name": "Application_3",
+          "version": "0.1.0"
+          "user": {
+            "name": "app3_dev",
+            "type": "solaceClientCertificateUsername"
           }
         }
       ]
@@ -416,34 +423,40 @@ Make sure the Cloud EMA's are running for each environment:
 If these don't run you cannot use configPush
 Execute a config-push on the EventPortal for both applications on the dev broker 
 
-Now you can test both strategies for deploym,ent on tst:
+Now you can test both strategies for deployment on tst:
 
 ### ConfigPush
 
 Deploy version to Test
 ```shell
-runAction --mode configPush --action=deploy --target=tst
+runAction --mode configPush --action=deploy --target=tst --appl "[{\"Domainname\":[\"app_1\",\"app_2\",\"app_3\",\"app_4\"]}]"
 ```
 Check on the Test broker if acl, clientUsernames and Queues are created
 
 Undeploy version from Test
 ```
-runAction --mode configPush --action=undeploy --target=tst
+runAction --mode configPush --action=undeploy --target=tst --appl "[{\"Domainname\":[\"app_1\",\"app_2\",\"app_3\",\"app_4\"]}]"
 ```
 Check if acls, clientUsernames and queues are removed
 
 ### Semp Deployment
 Deploy version to Test
 ```shell
-runAction --mode semp --action=deploy --target=tst
+runAction --mode semp --action=deploy --target=tst --appl "[{\"Domainname\":[\"app_1\",\"app_2\",\"app_3\",\"app_4\"]}]"
 ```
 Check on the Test broker if acl, clientUsernames and Queues are created
 
 Undeploy version from Test
 ```
-runAction --mode semp --action=undeploy --target=tst
+runAction --mode semp --action=undeploy --target=tst --appl "[{\"Domainname\":[\"app_1\",\"app_2\",\"app_3\",\"app_4\"]}]"
 ```
 Check if acls, clientUsernames and queues are removed
+
+Save deployment of version for Test
+```shell
+runAction --mode semp --action=save --target=tst --appl "[{\"Domainname\":[\"app_1\",\"app_2\",\"app_3\",\"app_4\"]}]"
+```
+Check if there are folders created in store with this format: store/[app_domain]/[application]/[version]/preview-[state].json
 
 ### Test connectivity Dev environment
 

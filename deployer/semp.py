@@ -4,7 +4,8 @@ from deployer.errors import EventPortalException
 from deployer.event_portal import EventPortal
 from deployer.event_portal import get_path_expr
 from deployer.broker import Broker
-from datetime import date
+from deployer.utils import store_preview
+from deployer.enums import Action
 
 def semp(parameters):
     logging.debug(f"Running semp with parameters { parameters }")
@@ -18,17 +19,23 @@ def semp(parameters):
     environment_name = target.get("environment")
     broker_configs = target["brokers"]
     for domain in parameters.get("target").get("domains"):
-        domain_name = domain.get("domainName")
-        applications = domain.get("applications")
+        domain_name = domain["domainName"]
+        applications = domain["applications"]
         for application in [app for app in applications if app["versionId"]]:
-            application_name = application.get("name")
+            application_name = application["name"]
+            version_name = application["version"]
             version_id = application["versionId"]
-            logging.info(f"{action.capitalize()} application: { application["name"] } with version { application["version"] } and id { application["versionId"]} in domain {domain.get("domainName")}")
+            state = application["state"]
+            logging.info(f"{action.capitalize()} application: [{ application_name }] with version [{ version_name }], id [{ version_id }] and state [{ state }] in domain [{domain_name}]")
             try:
-                preview = ep.preview_application_deployment(version_id, "deploy", broker_id)
-                print(f"Store preview for {environment_name}/{domain_name}/{application_name}/{date.today()}/preview.json")
-                execute(application, action, broker_configs, preview, application["name"])
+                preview = ep.preview_application_deployment(version_id, Action.DEPLOY.value, broker_id)
+                if action in [Action.SAVE.value]:
+                    store_preview(preview, environment_name, domain_name, application_name, version_name, state)
+                if action in [Action.DEPLOY.value, Action.UNDEPLOY.value]:
+                    execute(application, action, broker_configs, preview, application_name)
             except EventPortalException as ex:
+                logging.error(f"semp_deploy::EventPortalException::{ex}")
+            except Exception as ex:
                 logging.error(f"semp_deploy::Exception::{ex}")
 
 def execute(config, action, broker_cfgs, preview, app_name):
@@ -40,6 +47,8 @@ def execute(config, action, broker_cfgs, preview, app_name):
     solace_authorization_groups =  get_path_expr(preview, f"$..{selector}[?(@.type=='solaceAuthorizationGroup')].value")
     solace_acl_profiles = get_path_expr(preview, f"$..{selector}[?(@.type=='solaceAcl')].value")
     solace_queues = get_path_expr(preview, f"$..{selector}[?(@.type=='solaceQueue')].value")
+    solace_rdps = get_path_expr(preview, f"$..{selector}[?(@.type=='solaceRestDeliveryPoint')].value")
+    solace_rdp_queue_bindings = get_path_expr(preview, f"$..{selector}[?(@.type=='solaceRestDeliveryPointQueueBinding')].value")
     for cfg in broker_cfgs:
         broker_name = cfg["name"]
         base_url = cfg["url"]
@@ -47,18 +56,34 @@ def execute(config, action, broker_cfgs, preview, app_name):
         user = cfg["user"]
         pwd = cfg["password"]
         broker = Broker(broker_name, base_url, user, pwd, msg_vpn_name)
-        if action == 'deploy':
-            broker.create_acl_profile( solace_acl_profiles[0], app_name) # always just 1 profile
-            if client_usernames:
-                broker.create_client_username(client_usernames[0], solace_acl_profiles[0].get("aclProfile"), app_name, config.get("user"))# possible multi?
+        if action == Action.DEPLOY.value:
+            if solace_acl_profiles:
+                broker.create_acl_profile( solace_acl_profiles[0], app_name) # always just 1 profile
+            if solace_client_usernames:
+                broker.create_client_username(solace_client_usernames[0], solace_acl_profiles[0].get("aclProfile"), app_name, config.get("user"))# possible multi?
+            if solace_client_certificate_usernames:
+                broker.create_client_username(solace_client_certificate_usernames[0], solace_acl_profiles[0].get("aclProfile"), app_name, config.get("user"))# possible multi?
             if solace_authorization_groups:
                 broker.create_authorization_group(solace_authorization_groups[0], solace_acl_profiles[0].get("aclProfile"), app_name, config.get("user"))
-            broker.create_queues(solace_queues, config.get("user"))
+            if solace_queues:
+                broker.create_queues(solace_queues, config.get("user"))
+            if solace_rdps:
+                broker.create_rdps(solace_rdps)
+            if solace_rdp_queue_bindings:
+                broker.create_rdp_queue_bindings(solace_rdp_queue_bindings)
         else:
-            broker.delete_queues(solace_queues)
-            if client_usernames:
-                broker.delete_client_username(client_usernames[0], config.get("user"), app_name)
+            if solace_rdp_queue_bindings:
+                broker.delete_rdp_queue_bindings(solace_rdp_queue_bindings)
+            if solace_rdps:
+                broker.delete_rdps(solace_rdps)
+            if solace_queues:
+                broker.delete_queues(solace_queues)
+            if solace_client_usernames:
+                broker.delete_client_username(solace_client_usernames[0], config.get("user"), app_name)
+            if solace_client_certificate_usernames:
+                broker.delete_client_username(solace_client_certificate_usernames[0], config.get("user"), app_name)
             if solace_authorization_groups:
                 broker.delete_authorization_group(solace_authorization_groups[0], config.get("user"), app_name)
-            broker.delete_acl_profile(solace_acl_profiles[0], app_name)
+            if solace_acl_profiles:
+                broker.delete_acl_profile(solace_acl_profiles[0], app_name)
 

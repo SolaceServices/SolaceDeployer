@@ -2,21 +2,7 @@ from deployer.utils import parse_arguments, setup_logging, show_help, logging, C
 from deployer.config_push import config_push
 from deployer.semp import semp
 from deployer.event_portal import EventPortal
-from enum import Enum
-
-class Environment(Enum):
-    DEV = 'dev'
-    TST = 'tst'
-    ACC = 'acc'
-    PRD = 'prd'
-
-class Action(Enum):
-    DEPLOY = 'deploy'
-    UNDEPLOY = 'undeploy'
-
-class Mode(Enum):
-    CONFIG_PUSH = 'configPush'
-    SEMP = 'semp'
+from deployer.enums import Environment, Action, Mode, State
 
 def run():
     arguments = parse_arguments()
@@ -127,6 +113,8 @@ def add_eligible_version_ids(ep, domain_id, env, action, mode, parameters):
                 raise Exception({"code": "NOT_EXIST", "message": f"App { app_name } version { version_name } does not exist in environment { env }"})
             if is_version_eligible(env, app_name, action, mode, application_version):
                 application["versionId"]=application_version["id"]
+                state = State.from_value(application_version["stateId"])
+                application["state"] = state.label
             else:
                 logging.info(f"App { app_name } version {application_version.get('version')} not eligible for env { env }")
 
@@ -137,10 +125,10 @@ def is_version_eligible(env, app_name, action, mode, version):
     # if env in [acc, prd] and version.state == 2 and action == 'deploy' => True
     # if env in [acc, prd] and version.state in [2, 3, 4] and action == 'undeploy' => True
     # else False
-    if ((env in [Environment.DEV.value, Environment.TST.value] and version.get('stateId') in ['1','2'] and action == Action.DEPLOY.value) or
-            (env in [Environment.DEV.value, Environment.TST.value] and action == Action.UNDEPLOY.value)):
+    if ((env in [Environment.DEV.value, Environment.TST.value] and version.get('stateId') in ['1','2'] and action in [Action.DEPLOY.value, Action.SAVE.value]) or
+            (env in [Environment.DEV.value, Environment.TST.value] and action in [Action.UNDEPLOY.value, Action.SAVE.value])):
         return True
-    if ((env in [Environment.ACC.value, Environment.PRD.value] and version.get('stateId') == '2' and action == Action.DEPLOY.value) or
-            (env in [Environment.ACC.value, Environment.PRD.value] and version.get('stateId') in ['2','3','4'] and action == Action.UNDEPLOY.value)):
+    if ((env in [Environment.ACC.value, Environment.PRD.value] and version.get('stateId') == '2' and action in [Action.DEPLOY.value, Action.SAVE.value]) or
+            (env in [Environment.ACC.value, Environment.PRD.value] and version.get('stateId') in ['2','3','4'] and action in [Action.UNDEPLOY.value, Action.SAVE.value])):
         return True
     return False

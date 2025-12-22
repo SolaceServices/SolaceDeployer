@@ -6,6 +6,9 @@ from deployer.event_portal import get_path_expr
 from urllib.parse import quote
 
 import logging
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class BrokerResponse:
     def __init__(self, status_code, message):
@@ -263,7 +266,6 @@ class Broker:
         queue_name = configuration["queueName"]
         logging.info(f"Delete Queue {queue_name}")
         delete_url = f"{url}/{queue_name}"
-        logging.info(f"Delete queue { queue_name }")
         resp = self.api("DELETE", delete_url)
         self.check_response(resp, "queue", queue_name)
 
@@ -300,12 +302,139 @@ class Broker:
         resp = self.api("DELETE", delete_url)
         self.check_response(resp, "subscription", topic)
 
+    def rdp_exists(self, rdp_name):
+        url = f"msgVpns/{ self.msg_vpn_name }/restDeliveryPoints/{ rdp_name }"
+        response = self.api("GET", url)
+        return response.status_code == 200
+
+    def create_rdps(self, solace_rdps):
+        logging.info(f"Create restDeliveryPoints")
+        for rdp in solace_rdps:
+            self.create_rdp(rdp)
+
+    def create_rdp(self, rdp):
+        url = f"msgVpns/{ self.msg_vpn_name }/restDeliveryPoints"
+        configuration = rdp["restDeliveryPointConfiguration"]
+        configuration["msgVpnName"] = self.msg_vpn_name
+        rdp_name = configuration["restDeliveryPointName"]
+        logging.info(f"Create rdp '{ rdp_name }' on messageVPN '{ self.msg_vpn_name }'")
+        if self.rdp_exists(rdp_name):
+            logging.debug(f"Patch { url }/{ rdp_name } payload { configuration }")
+            resp = self.api("PATCH", f"{ url }/{ rdp_name }", json=configuration)
+            self.check_response(resp, "rdp", rdp_name)
+        else:
+            logging.debug(f"POST { url } payload { configuration }")
+            resp = self.api("POST", url, json=configuration)
+            self.check_response(resp, "rdp", rdp_name)
+        self.process_rdp_consumers(rdp_name, rdp["restConsumers"])
+
+    def delete_rdps(self, solace_rdps):
+        logging.info(f"Delete restDeliveryPoints")
+        for rdp in solace_rdps:
+            self.delete_rdp(rdp)
+
+    def delete_rdp(self, rdp):
+        url = f"msgVpns/{ self.msg_vpn_name }/restDeliveryPoints"
+        configuration = rdp["restDeliveryPointConfiguration"]
+        rdp_name = configuration["restDeliveryPointName"]
+        logging.info(f"Delete restDeliveryPoint { rdp_name }")
+        resp = self.api("DELETE", f"{url}/{rdp_name}")
+        self.check_response(resp, "rdp", rdp_name)
+
+    def process_rdp_consumers(self, rdp_name, rdp_consumers):
+        for rest_consumer in rdp_consumers:
+            rest_consumer_name = rest_consumer["restConsumerConfiguration"]["restConsumerName"]
+            self.create_rdp_consumer(rdp_name, rest_consumer)
+
+    def get_rdp_consumers(self, rdp_name):
+        url = f"msgVpns/{ self.msg_vpn_name }/restDeliveryPoints/{rdp_name}/restConsumers"
+        resp = self.api("GET", url)
+        return get_path_expr(resp.message, "$..restConsumerName") if resp.status_code == 200 else None
+
+    def rdp_consumer_exists(self, rdp_name, rdp_consumer_name):
+        url = f"msgVpns/{ self.msg_vpn_name }/restDeliveryPoints/{ rdp_name }/restConsumers/{ rdp_consumer_name }"
+        response = self.api("GET", url)
+        return response.status_code == 200
+
+    def create_rdp_consumer(self, rdp_name, rdp_consumer):
+        url = f"msgVpns/{ self.msg_vpn_name }/restDeliveryPoints/{ rdp_name }/restConsumers"
+        configuration = rdp_consumer["restConsumerConfiguration"]
+        rdp_consumer_name = configuration["restConsumerName"]
+        if self.rdp_consumer_exists(rdp_name, rdp_consumer_name):
+            logging.debug(f"Patch { url }/{ rdp_consumer_name } payload { configuration }")
+            resp = self.api("PATCH", f"{ url }/{ rdp_consumer_name }", json=configuration)
+            self.check_response(resp, "rdp_consumer", rdp_consumer_name)
+        else:
+            logging.debug(f"POST { url } payload { configuration }")
+            resp = self.api("POST", url, json=configuration)
+            self.check_response(resp, "rdp_consumer", rdp_consumer_name)
+
+    def rdp_queue_binding_exists(self, rdp_name, queue_binding_name):
+        url = f"msgVpns/{ self.msg_vpn_name }/restDeliveryPoints/{ rdp_name }/queueBindings/{ queue_binding_name }"
+        response = self.api("GET", url)
+        return response.status_code == 200
+
+    def create_rdp_queue_bindings(self, rdp_queue_bindings):
+        logging.info(f"Create RDP Queue bindings")
+        for queue_binding in rdp_queue_bindings:
+            self.create_rdp_queue_binding(queue_binding)
+
+    def create_rdp_queue_binding(self, queue_binding):
+        configuration = queue_binding["queueBindingConfiguration"]
+        rdp_name = configuration["restDeliveryPointName"]
+        queue_binding_name = configuration["queueBindingName"]
+        url = f"msgVpns/{ self.msg_vpn_name }/restDeliveryPoints/{ rdp_name }/queueBindings"
+        if self.rdp_queue_binding_exists(rdp_name, queue_binding_name):
+            logging.debug(f"Patch { url }/{ queue_binding_name } payload { configuration }")
+            resp = self.api("PATCH", f"{ url }/{ queue_binding_name }", json=configuration)
+            self.check_response(resp, "queue_binding", queue_binding_name)
+        else:
+            logging.debug(f"POST { url } payload { configuration }")
+            resp = self.api("POST", url, json=configuration)
+            self.check_response(resp, "rdp_consumer", queue_binding_name)
+        protected_request_headers = queue_binding["protectedRequestHeaders"]
+        if protected_request_headers:
+            self.create_queue_binding_request_headers(rdp_name, queue_binding_name, True, protected_request_headers )
+        request_headers = queue_binding["requestHeaders"]
+        if request_headers:
+            self.create_queue_binding_request_headers(rdp_name, queue_binding_name, False, request_headers )
+
+    def create_queue_binding_request_headers(self, rdp_name, queue_binding_name, protected, request_headers):
+        logging.info(f"Create RDP Queue Bindings RequestHeaders")
+        for request_header in request_headers:
+            self.create_queu_bindings_request_header(rdp_name, queue_binding_name)
+
+    def create_queue_binding_request_header(self, rdp_name, queue_binding_name, protected, request_header):
+        request = "protectedRequestHeaders" if protected else "requestHeaders"
+        logging.info(f"Create RDP Queue Bindings { request }")
+        url = f"msgVpns/{ self.msg_vpn_name }/restDeliveryPoints/{ rdp_name }/queueBindings/{ queue_binding_name }/{ request }"
+        logging.debug(f"POST { url } payload { request_header }")
+        if protected:
+            logging.error("")
+        else:
+            resp = self.api("POST", url, json=request_header)
+            self.check_response(resp, "requestHeader", request)
+
+    def delete_rdp_queue_bindings(self, solace_rdp_queue_bindings):
+        logging.info(f"Delete restDeliveryPointQueueBindings")
+        for rdp_queue_binding in solace_rdp_queue_bindings:
+            self.delete_rdp_queue_binding(rdp_queue_binding)
+
+    def delete_rdp_queue_binding(self, queue_binding):
+        configuration = queue_binding["queueBindingConfiguration"]
+        rdp_name = configuration["restDeliveryPointName"]
+        queue_binding_name = configuration["queueBindingName"]
+        url = f"msgVpns/{ self.msg_vpn_name }/restDeliveryPoints/{ rdp_name }/queueBindings/{ queue_binding_name }"
+        logging.info(f"Delete restDeliveryPoint { rdp_name } QueueBinding { queue_binding_name }")
+        resp = self.api("DELETE", f"{url}")
+        self.check_response(resp, "rdp", rdp_name)
+
     def api(self, method, endpoint, **kwargs):
         try:
             if method is None or endpoint is None:
                 raise Exception('You must pass a method and endpoint')
             url = f"{ self.url }/{endpoint}"
-            response = request(method, url, auth=self.auth, headers=self.headers, **kwargs)
+            response = request(method, url, verify=False, auth=self.auth, headers=self.headers, **kwargs)
             response.raise_for_status()
             return BrokerResponse(response.status_code, response.json())
         except exceptions.HTTPError as exc:
