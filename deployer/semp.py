@@ -79,11 +79,11 @@ def execute(config, action, broker_cfgs, preview, app_name):
             if solace_queues:
                 broker.delete_queues(solace_queues)
             if solace_client_usernames:
-                broker.delete_client_username(solace_client_usernames[0], config.get("user"), app_name)
+                broker.delete_client_username(solace_client_usernames[0], app_name)
             if solace_client_certificate_usernames:
-                broker.delete_client_username(solace_client_certificate_usernames[0], config.get("user"), app_name)
+                broker.delete_client_username(solace_client_certificate_usernames[0], app_name)
             if solace_authorization_groups:
-                broker.delete_authorization_group(solace_authorization_groups[0], config.get("user"), app_name)
+                broker.delete_authorization_group(solace_authorization_groups[0], app_name)
             if solace_acl_profiles:
                 broker.delete_acl_profile(solace_acl_profiles[0], app_name)
 

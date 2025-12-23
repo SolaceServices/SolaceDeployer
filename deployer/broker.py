@@ -62,7 +62,7 @@ class Broker:
                 self.create_acl_client_connect_exception(profile_name, exception)
             else:
                 logging.info(f"ConnectException {exception} already exists in ACL-profile {profile_name}...")
-            current_exceptions.remove(exception) if current_exceptions else None
+                current_exceptions.remove(exception) if current_exceptions else None
         for exception in current_exceptions:
             self.delete_acl_client_connect_exception(profile_name, exception)
 
@@ -95,7 +95,7 @@ class Broker:
                 self.create_acl_publish_topic_exception(profile_name, exception)
             else:
                 logging.info(f"PublishTopicException {exception} already exists in ACL-profile {profile_name}...")
-            current_exceptions.remove(exception) if current_exceptions else None
+                current_exceptions.remove(exception) if current_exceptions else None
         for exception in current_exceptions:
             self.delete_acl_publish_topic_exception(profile_name, exception)
 
@@ -129,7 +129,7 @@ class Broker:
                 self.create_acl_subscribe_topic_exception(profile_name, exception)
             else:
                 logging.info(f"SubscribeTopicException {exception} already exists in ACL-profile {profile_name}...")
-            current_exceptions.remove(exception) if current_exceptions else None
+                current_exceptions.remove(exception) if current_exceptions else None
         for exception in current_exceptions:
             self.delete_acl_subscribe_topic_exception(profile_name, exception)
 
@@ -174,10 +174,9 @@ class Broker:
     def create_client_username(self, client_username, acl_profile, app_name, user):
         logging.info(f"Create Client Username {user.get("name")} for Application {app_name}")
         url = f"msgVpns/{ self.msg_vpn_name }/clientUsernames"
-        user_name =  user.get("name")
+        user_name = client_username["clientUsername"]
         client_username["msgVpnName"] = self.msg_vpn_name
         client_username["aclProfileName"] = acl_profile["aclProfileName"]
-        client_username["clientUsername"] =  user_name
         if user.get("type") == "solaceClientUsername":
             client_username["password"] = user.get("password")
         logging.info(f"Create clientUsername {user_name} on messageVPN {self.msg_vpn_name}")
@@ -190,9 +189,9 @@ class Broker:
             resp = self.api("POST", url, json=client_username)
             self.check_response(resp, "clientUsername", user_name)
 
-    def delete_client_username(self, client_username, user, app_name):
+    def delete_client_username(self, client_username, app_name):
         url = f"msgVpns/{ self.msg_vpn_name }/clientUsernames"
-        client_name = user["name"]
+        client_name = client_username["clientUserName"]
         delete_url = f"{url}/{client_name}"
         logging.info(f"Delete client name { client_name } for Application {app_name}")
         resp = self.api("DELETE", delete_url)
@@ -243,7 +242,8 @@ class Broker:
         configuration = queue["queueConfiguration"]
         configuration["msgVpnName"] = self.msg_vpn_name
         queue_name = configuration["queueName"]
-        configuration["owner"] = owner["name"]
+        if not configuration["owner"]:
+            configuration["owner"] = owner["name"]
         logging.info(f"Create queue '{queue_name}' on messageVPN '{self.msg_vpn_name}'")
         if self.queue_exists(queue_name):
             logging.debug(f"Patch {url}/{queue_name} payload { configuration }")
@@ -276,7 +276,7 @@ class Broker:
                 self.create_queue_subscription_topic(queue_name, subscription)
             else:
                 logging.info(f"Subscription {subscription} already exists...")
-            current_subscriptions.remove(subscription) if current_subscriptions else None
+                current_subscriptions.remove(subscription) if current_subscriptions else None
         for subscription in current_subscriptions:
             self.delete_queue_subscription_topic(queue_name, subscription)
 
