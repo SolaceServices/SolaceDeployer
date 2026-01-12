@@ -393,7 +393,7 @@ config/tst.json
           "version": "0.1.2",
           "user": {
             "name": "app1-tst",
-            "type": "solaceClientUsername"
+            "type": "solaceClientUsername",
             "password": "app1-tst"
           }
         },
@@ -402,8 +402,15 @@ config/tst.json
           "version": "0.1.0"
           "user": {
             "name": "app2-tst",
-            "type": "solaceClientUsername"
-            "password": "app2-tst"
+            "type": "solaceClientCertificate"
+          }
+        },
+        {
+          "name": "Application_3",
+          "version": "0.1.0"
+          "user": {
+            "name": "app3-role",
+            "type": "solaceAuthorizationGroup"
           }
         }
       ]
