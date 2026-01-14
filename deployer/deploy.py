@@ -44,9 +44,9 @@ def get_parameters(arguments):
 
     preview_env_id = ep.get_environment_id(preview_config["environmentName"])
     preview_mesh_id = ep.get_modeled_event_mesh_id(preview_env_id, preview_config["meshName"])
-    preview_broker_id = ep.get_messaging_services_ids(preview_mesh_id)[0]
+#    preview_broker_id = ep.get_messaging_services_ids(preview_mesh_id)[0]
     preview_config["mesh_id"] = preview_mesh_id
-    preview_config["broker_id"] = preview_broker_id
+#    preview_config["broker_id"] = preview_broker_id
 
     target_env_id = ep.get_environment_id(target_config["environmentName"])
     target_mem_id = ep.get_modeled_event_mesh_id(target_env_id, target_config["meshName"])

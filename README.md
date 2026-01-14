@@ -6,7 +6,21 @@ This project can be used inside a CICD pipeline to execute deployments and undep
 
 - python3 [>= 3.12]
 - virtual environment activated
--
+- Cloud Console Token with the following permissions:
+  * event_designer:access
+  * modeled_event_broker:get:*
+  * application_domain:get:*
+  * application:get:*
+  * ep_environment:get:*
+  * modeled_event_mesh:get:*
+  * modeled_event_broker:get:*
+  * mission_control:access
+  * services:get
+  * services:get:self
+  * services:view 
+  * services:view:self
+
+
 ```console
  python -m venv .venv
  source .venv/bin/activate
@@ -68,17 +82,17 @@ There are 2 CICD strategies possible.
 
 #### Steps to execute for a deployment:
 
-1. Get the predefined values for an environment: environmentName, modeledEventMeshName, applicationDomainName, applicationName(s) and its applicationVersion(s) to deploy
-2. Get the list of brokers with url, user, password, ands msgVpnName to use for deployment
-3. Get the dev environmentId: GET /api/v2/architecture/environments, extract the environmentId (id) from the response where name === {{environmentName}}
-4. Get the meshId for the environment: GET /api/v2/architecture/eventMeshes?environmentId={{environmentId}}, extract the meshId (id) from the response where name == {{modeledEventMeshName}}
-5. Get one of the connected brokers: GET /api/v2/architecture/messagingServices?eventMeshId={{meshId}}, extract the brokerId and the msgVpnName ($..msgVpn)
-6. For each application domain:
+1. Get the predefined values for a source environment: environment, environmentName, modeledEventMeshName to get the preview
+1. Get the predefined values for a target environment: environment, environmentName, modeledEventMeshName, applicationDomainName, applicationName(s) and its applicationVersion(s) to deploy
+1. Get the list of brokers with url, user, password, ands msgVpnName for the target environment to use for deployment
+1. Get the dev environmentId: GET /api/v2/architecture/environments, extract the environmentId (id) from the response where name === {{environmentName}}
+1. Get the meshId for the environment: GET /api/v2/architecture/eventMeshes?environmentId={{environmentId}}, extract the meshId (id) from the response where name == {{modeledEventMeshName}}
+1. For each application domain:
     1. Get the applicationDomainId: GET /api/v2/architecture/applicationDomains?name={{applicationDomainName}}, extract the applicationDomainId (id) from the response
-    2. For each applicationName:
+    1. For each applicationName:
        1. Get the applicationId: GET /api/v2/architecture/applications?applicationDomainId={{applicationDomainId}}, extract the applicationId (id) where name == {{applicationName}}
-       2. get the applicationVersionId: GET /api/v2/architecture/applicationVersions?applicationIds={{applicationId}}, extract the applicationVersionId (id) where version == {{applicationVersion}}
-       3. Create a preview applicationVersionId: POST /api/v2/architecture/runtimeManagement/applicationDeployments with body:
+       1. get the applicationVersionId: GET /api/v2/architecture/applicationVersions?applicationIds={{applicationId}}, extract the applicationVersionId (id) where version == {{applicationVersion}}
+       1. Create a preview applicationVersionId: POST /api/v2/architecture/runtimeManagement/applicationDeployments with body:
          { "applicationVersionId":  "{{applicationVersionId}}", "action": "deploy or undeploy", "eventBrokerId": "{{brokerId}}
 
 This will return a json file containing the new (requested) configuration and the original (existing) configuration for the application version.
@@ -336,46 +350,7 @@ config/dev.json
 {
   "environment": "dev",
   "environmentName": "Dev",
-  "memName": "SampleMesh",
-  "domains": [
-    {
-      "domainName": "SolaceSampleDomain",
-      "applications": [
-        {
-          "name": "Application_1",
-          "version": "0.1.2",
-          "user": {
-            "name": "app1-dev",
-            "type": "solaceClientUsername"
-            "password": "app1-dev"
-          }
-        },
-        {
-          "name": "Application_2",
-          "version": "0.1.0"
-          "user": {
-            "name": "PubSubRoleA",
-            "type": "solaceAuthorizationGroup"
-          }
-        },
-        {
-          "name": "Application_3",
-          "version": "0.1.0"
-          "user": {
-            "name": "app3_dev",
-            "type": "solaceClientCertificateUsername"
-          }
-        }
-      ]
-    }
-  ],
-  "brokers": [ {
-    "name": "[dev broker name]",
-    "url": "[Base path  from EP ClusterManager/Manage/SEMP-REST API]",
-    "user": "[Username from EP ClusterManager/Manage/SEMP-REST API]",
-    "password": "[Password from EP ClusterManager/Manage/SEMP-REST API]",
-    "msgVpnName": "[Message VPN Name from EP ClusterManager/Manage/SEMP-REST API]"
-  }]
+  "memName": "SampleMesh"
 }
 ```
 config/tst.json

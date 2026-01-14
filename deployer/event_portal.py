@@ -21,6 +21,7 @@ class EventPortal:
         self.headers = {"authorization": f"Bearer {token}"}
 
     ## Design API calls
+    # Token Permissions: [ event_designer:access and application_domain:get:* ]
     def get_application_domain_object(self,application_domain_name):
         try:
             response = self.design_api("GET", "applicationDomains", params={"name": application_domain_name})
@@ -35,6 +36,7 @@ class EventPortal:
         application_domain = self.get_application_domain_object(application_domain_name)
         return application_domain.get("id")
 
+    # Token Permissions: [ event_designer:access and application:get:* ]
     def get_application_objects(self,application_domain_id):
         try:
             response = self.design_api("GET", "applications", params={"applicationDomainId": application_domain_id})
@@ -58,6 +60,7 @@ class EventPortal:
         application = self.get_application_object_by_name(application_domain_id, application_name)
         return application["id"] if application["id"] else None
 
+    # Token Permissions: [ event_designer:access and application:get:* ]
     def get_application_version_objects(self,application_id):
         try:
             response = self.design_api("GET", "applicationVersions", params={"applicationIds": application_id})
@@ -87,6 +90,7 @@ class EventPortal:
         return version["id"] if version["id"] else None
 
     ## Runtime API calls
+    # Token Permissions: [ event_designer:access and ep_environment:get:* ]
     def get_environment_object(self, environment_name):
         try:
             response = self.runtime_api("GET", "environments")
@@ -101,6 +105,7 @@ class EventPortal:
         env = self.get_environment_object(environment_name)
         return env.get("id")
 
+    # Token Permissions: [ event_designer:access and modeled_event_mesh:get:* ]
     def get_modeled_event_mesh_object(self, environment_id, mesh_name):
         try:
             response = self.runtime_api("GET", "eventMeshes", params={"environmentId": environment_id})
@@ -115,6 +120,7 @@ class EventPortal:
         mesh = self.get_modeled_event_mesh_object(environment_id, mesh_name)
         return mesh.get("id")
 
+    # Token Permissions: [ event_designer:access and modeled_event_broker:get:* ]
     def get_messaging_services_objects(self, mesh_id):
         try:
             response = self.runtime_api("GET", "messagingServices", params={"eventMeshId": mesh_id})
@@ -128,6 +134,7 @@ class EventPortal:
         jsonpath_expr = parse("$..messagingServiceId")
         return [match.value for match in jsonpath_expr.find(services)]
 
+    # Token Permissions: [ mission_control:access and (services:get or services:get:self or services:view or services:view:self) ]
     def preview_application_deployment(self, version_id, action, messaging_service_id):
         try:
             payload = {
@@ -141,6 +148,7 @@ class EventPortal:
             logging.error(f"preview_application-deployment:: Exception {ex}")
             raise ex
 
+    # Token Permissions: [ modeled_event_broker:deploy:* and application:update:* ]
     def create_application_deployment(self, version_id, action, messaging_service_id):
         try:
             payload = {
@@ -153,7 +161,8 @@ class EventPortal:
         except Exception as ex:
             raise ex
 
-    ## MissionControl API calls
+    ## Mission Control API calls
+    # Token Permissions: [ mission_control:access or services:get or services:get:self or services:view or services:view:self ]
     def get_event_broker_objects(self, environment_id):
         try:
             response = self.missioncontrol_api("GET", "eventBrokerServices", params={"customAttributes": f"environmentId=={environment_id}"})
@@ -179,6 +188,7 @@ class EventPortal:
             if broker.get("name") == broker_name:
                 return broker
 
+    # Token Permissions: [ mission_control:access or services:get or services:get:self or services:view or services:view:self ]
     def get_client_profile_objects(self, service_id):
         try:
             response = self.missioncontrol_api("GET", f"eventBrokerServices/{service_id}/clientProfiles")

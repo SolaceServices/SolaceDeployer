@@ -441,6 +441,7 @@ class Broker:
             code = exc.response.status_code
             message = exc.response.json()
             if code == 400:
+                self.check_semp_message(method, endpoint, code, message)
                 return BrokerResponse(code, message)
             if code == 422:
                 logging.error(f"BROKER::HTTP { method } Request to endpoint { endpoint } failed with status_code { code }: message: { message }")
@@ -457,12 +458,31 @@ class Broker:
             "PATCH": "Modification",
             "DELETE": "Deletion"
         }
+        method = response.message.get("meta").get("request").get("method")
+        operation = method_mapping.get(method, "Unknown")
         if response.status_code in [200, 201]:
-            method = response.message.get("meta").get("request").get("method")
-            operation = method_mapping.get(method, "Unknown")
             logging.info(f"{operation} of {object_type} {name} succeeded")
         else:
-            if response.message.get("meta").get("error").get("code") == 10:
-                logging.info(f"{object_type} {name} already exists")
-            else:
-                logging.info(f"Creation of {object_type} {name} failed! {response.message}")
+            error = response.message.get("meta",{}).get("error")
+            logging.error(f"{operation} of {object_type} {name} failed! Error: {error}")
+
+    #    Common SEMP v2 Error Codes
+    #    Code	Status	                                Description
+    #    2	    FAIL	                                General failure - see description for details
+    #    6	    NOT_FOUND	                            Object or parent object doesn't exist
+    #    10     ALREADY_EXISTS                          Object already exists
+    #    11	    INVALID_PARAMETER	                    Unexpected attribute/parameter in object
+    #    14	    NOT_SUPPORTED	                        Request/attribute not supported
+    #    27	    PARSE_ERROR	                            HTML/JSON formatting error
+    #    72	    UNAUTHORIZED	                        Insufficient access level
+    #    89	    NOT_ALLOWED	                            Broker configuration prevents request
+    #    228	MISSING_PARAMETER	                    Required attribute combination missing
+    #    549	SEMP_RESPONSE_BUFFER_ALLOCATION_FAILED	Response too large, use paging
+    def check_semp_message(self, method, endpoint, code, message):
+        error = message.get('meta',{}).get('error',None)
+        error_code = error.get("code")
+        match error_code:
+            case 6 | 10:
+                logging.debug(f"BROKER::HTTP { method } Request to endpoint { endpoint } failed with status_code { code }: SEMP error: { error }")
+            case _:
+                logging.error(f"BROKER::HTTP { method } Request to endpoint { endpoint } failed with status_code { code }: SEMP error: { error }")
