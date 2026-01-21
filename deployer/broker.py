@@ -159,7 +159,6 @@ class Broker:
     def delete_acl_profile(self, acl_profile, app_name):
         url = f"msgVpns/{ self.msg_vpn_name }/aclProfiles"
         profile = acl_profile["aclProfile"]
-        #acl_profile_name = f"app-{ app_name.lower() }_{index}" if profile["aclProfileName"].startswith("app-") else profile["aclProfileName"]
         acl_profile_name = profile["aclProfileName"]
         logging.info(f"Delete ACL Profile {acl_profile_name} for {app_name}")
         delete_url = f"{url}/{acl_profile_name}"
@@ -174,9 +173,10 @@ class Broker:
     def create_client_username(self, client_username, acl_profile, app_name, user):
         logging.info(f"Create Client Username {user.get("name")} for Application {app_name}")
         url = f"msgVpns/{ self.msg_vpn_name }/clientUsernames"
-        user_name = client_username["clientUsername"]
         client_username["msgVpnName"] = self.msg_vpn_name
         client_username["aclProfileName"] = acl_profile["aclProfileName"]
+        user_name = user.get("name")
+        client_username["clientUsername"] =  user_name
         if user.get("type") == "solaceClientUsername":
             client_username["password"] = user.get("password")
         logging.info(f"Create clientUsername {user_name} on messageVPN {self.msg_vpn_name}")
@@ -189,9 +189,9 @@ class Broker:
             resp = self.api("POST", url, json=client_username)
             self.check_response(resp, "clientUsername", user_name)
 
-    def delete_client_username(self, client_username, app_name):
+    def delete_client_username(self, client_username, app_name, user=None):
         url = f"msgVpns/{ self.msg_vpn_name }/clientUsernames"
-        client_name = client_username["clientUserName"]
+        client_name = client_username["clientUserName"] if user is None else client_name = user.get("name")
         delete_url = f"{url}/{client_name}"
         logging.info(f"Delete client name { client_name } for Application {app_name}")
         resp = self.api("DELETE", delete_url)

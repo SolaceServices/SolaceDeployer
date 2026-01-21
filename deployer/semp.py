@@ -43,7 +43,6 @@ def execute(config, action, broker_cfgs, preview, app_name):
     selector = 'requested'# if action == 'deploy' else 'existing'
     solace_client_usernames = get_path_expr(preview, f"$..{selector}[?(@.type=='solaceClientUsername')].value")
     solace_client_certificate_usernames = get_path_expr(preview, f"$..{selector}[?( @.type=='solaceClientCertificateUsername')].value")
-    client_usernames = solace_client_usernames + solace_client_certificate_usernames
     solace_authorization_groups =  get_path_expr(preview, f"$..{selector}[?(@.type=='solaceAuthorizationGroup')].value")
     solace_acl_profiles = get_path_expr(preview, f"$..{selector}[?(@.type=='solaceAcl')].value")
     solace_queues = get_path_expr(preview, f"$..{selector}[?(@.type=='solaceQueue')].value")
@@ -79,9 +78,9 @@ def execute(config, action, broker_cfgs, preview, app_name):
             if solace_queues:
                 broker.delete_queues(solace_queues)
             if solace_client_usernames:
-                broker.delete_client_username(solace_client_usernames[0], app_name)
+                broker.delete_client_username(solace_client_usernames[0], app_name, config.get("user"))
             if solace_client_certificate_usernames:
-                broker.delete_client_username(solace_client_certificate_usernames[0], app_name)
+                broker.delete_client_username(solace_client_certificate_usernames[0], app_name, config.get("user"))
             if solace_authorization_groups:
                 broker.delete_authorization_group(solace_authorization_groups[0], app_name)
             if solace_acl_profiles:
