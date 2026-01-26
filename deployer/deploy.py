@@ -3,9 +3,9 @@ from deployer.config_push import config_push
 from deployer.semp import semp
 from deployer.event_portal import EventPortal
 from deployer.enums import Environment, Action, Mode, State
+import os
 
-def run():
-    arguments = parse_arguments()
+def run(arguments):
     setup_logging(arguments.log)
     if arguments.mode is None or arguments.mode not in [Mode.CONFIG_PUSH.value, Mode.SEMP.value]:
         show_help()
@@ -16,6 +16,12 @@ def run():
     if arguments.mode == Mode.CONFIG_PUSH.value and arguments.target == Environment.DEV.value:
         logging.info("This mode can not be used on the Dev environment. Use config push via the Event Portal!")
         exit(1)
+    logging.info(
+        f"Proxy settings:\n" 
+        f"  http_proxy={ os.environ.get('http_proxy') }\n"
+        f"  https_proxy={ os.environ.get('https_proxy') }\n"
+        f"  no_proxy={ os.environ.get('no_proxy') }"
+    )
     try:
         parameters = get_parameters(arguments)
         logging.info(f"Running deployer in mode {arguments.mode} with action {parameters["action"]} on environment {parameters.get("target").get("environmentName")}")

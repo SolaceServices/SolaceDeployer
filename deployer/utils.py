@@ -29,7 +29,8 @@ def parse_arguments():
     parser.add_argument("--target", type=str, help="target environment to execute the action on [one of tst,acc,prd]", default=None)
     parser.add_argument("--appl", type=json.loads, required=False, help='JSON string of domainnames and their applications to handle. Example: \'[{{"domain1":["appl1","appl2"]}}]\'', default=None)
     parser.add_argument("--action", type=str, help="Action, one of [deploy, undeploy]", default="deploy")
-    parser.add_argument("--log", type=str, help="Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL", default="INFO")
+    parser.add_argument("--log", type=str, help="Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)", default="INFO")
+    parser.add_argument("--proxy", type=str, help="Enable usage of proxy ()true, false", default="false")
     return parser.parse_args()
 
 def show_help(app_name='deploy'):
@@ -39,6 +40,7 @@ def show_help(app_name='deploy'):
     logging.info(f'     --appl: JSON string of domainnames and their applications to handle. Example: \'[{{"domain1":["appl1","appl2"]}}]\'')
     logging.info(f"     --action: Action, one of [deploy, undeploy] (optional, default 'deploy'")
     logging.info(f"     --log: Set the logging level [DEBUG, INFO, WARNING, ERROR, CRITICAL] (optional, default 'INFO'")
+    logging.info(f"     --proxy: Enable usage of proxy [true, false] (optional, default 'false'")
     exit(1)
 
 def setup_logging(log_level):

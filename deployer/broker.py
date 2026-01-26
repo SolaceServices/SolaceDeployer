@@ -191,7 +191,10 @@ class Broker:
 
     def delete_client_username(self, client_username, app_name, user=None):
         url = f"msgVpns/{ self.msg_vpn_name }/clientUsernames"
-        client_name = client_username["clientUserName"] if user is None else client_name = user.get("name")
+        if user is None:
+            client_name = client_username["clientUserName"]
+        else:
+            client_name = user.get("name")
         delete_url = f"{url}/{client_name}"
         logging.info(f"Delete client name { client_name } for Application {app_name}")
         resp = self.api("DELETE", delete_url)
