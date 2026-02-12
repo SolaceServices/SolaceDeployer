@@ -29,6 +29,7 @@ def semp(parameters):
             logging.info(f"{action.capitalize()} application: [{ application_name }] with version [{ version_name }], id [{ version_id }] and state [{ state }] in domain [{domain_name}]")
             try:
                 preview = ep.preview_application_deployment(version_id, Action.DEPLOY.value, broker_id)
+                logging.debug(f"preview = {preview}")
                 if action in [Action.SAVE.value]:
                     store_preview(preview, environment_name, domain_name, application_name, version_name, state)
                 if action in [Action.DEPLOY.value, Action.UNDEPLOY.value]:
@@ -38,9 +39,47 @@ def semp(parameters):
             except Exception as ex:
                 logging.error(f"semp_deploy::Exception::{ex}")
 
+def get_client_type(data):
+    client_types= [
+        "solaceClientUsername",
+        "solaceClientCertificateUsername",
+        "solaceAuthorizationGroup"
+    ]
+    client =  [item for  item in data if item['type'] in client_types]
+    return client[0]['type'] if client else None
+
+def deploy_client_type(broker, type, user, acl_profile, app_name):
+    payload = {
+        "enabled": True
+    }
+    match type:
+        case "solaceClientUsername":
+            broker.create_client_username(payload, acl_profile, app_name, user)
+        case "solaceClientCertificateUsername":
+            broker.create_client_username(payload, acl_profile, app_name, user)
+        case "solaceAuthorizationGroup":
+            broker.create_authorization_group(payload, acl_profile, app_name,user)
+        case _:
+            logging.error(f"Unknown target_client_type: {type}")
+
+def undeploy_client_type(broker, type, user, app_name):
+    match type:
+        case "solaceClientUsername":
+            broker.delete_client_username(None, app_name, user)
+        case "solaceClientCertificateUsername":
+            broker.create_client_username(None, app_name, user)
+        case "solaceAuthorizationGroup":
+            broker.create_authorization_group(None, app_name,user)
+        case _:
+            logging.error(f"Unknown target_client_type: {type}")
+
 def execute(config, action, broker_cfgs, preview, app_name):
     logging.debug(f"Deploying { config } to brokers { broker_cfgs }")
+    client = config.get("user")
+    target_client_type = client.get("type") if client else None
     selector = 'requested'# if action == 'deploy' else 'existing'
+    source_client_type = get_client_type(preview['data'][selector])
+    logging.debug(f"SourceClientType={source_client_type}\nTargetClientType={target_client_type}")
     solace_client_usernames = get_path_expr(preview, f"$..{selector}[?(@.type=='solaceClientUsername')].value")
     solace_client_certificate_usernames = get_path_expr(preview, f"$..{selector}[?( @.type=='solaceClientCertificateUsername')].value")
     solace_authorization_groups =  get_path_expr(preview, f"$..{selector}[?(@.type=='solaceAuthorizationGroup')].value")
@@ -58,12 +97,16 @@ def execute(config, action, broker_cfgs, preview, app_name):
         if action == Action.DEPLOY.value:
             if solace_acl_profiles:
                 broker.create_acl_profile( solace_acl_profiles[0], app_name) # always just 1 profile
-            if solace_client_usernames:
-                broker.create_client_username(solace_client_usernames[0], solace_acl_profiles[0].get("aclProfile"), app_name, config.get("user"))# possible multi?
-            if solace_client_certificate_usernames:
-                broker.create_client_username(solace_client_certificate_usernames[0], solace_acl_profiles[0].get("aclProfile"), app_name, config.get("user"))# possible multi?
-            if solace_authorization_groups:
-                broker.create_authorization_group(solace_authorization_groups[0], solace_acl_profiles[0].get("aclProfile"), app_name, config.get("user"))
+            if source_client_type == target_client_type:
+                if solace_client_usernames:
+                    broker.create_client_username(solace_client_usernames[0], solace_acl_profiles[0].get("aclProfile"), app_name, config.get("user"))# possible multi?
+                if solace_client_certificate_usernames:
+                    broker.create_client_username(solace_client_certificate_usernames[0], solace_acl_profiles[0].get("aclProfile"), app_name, config.get("user"))# possible multi?
+                if solace_authorization_groups:
+                    broker.create_authorization_group(solace_authorization_groups[0], solace_acl_profiles[0].get("aclProfile"), app_name, config.get("user"))
+            else:
+                logging.debug(f"Switching from {source_client_type} to {target_client_type}")
+                deploy_client_type(broker, target_client_type, config.get("user"),solace_acl_profiles[0].get("aclProfile"), app_name)
             if solace_queues:
                 broker.create_queues(solace_queues, config.get("user"))
             if solace_rdps:
@@ -77,12 +120,15 @@ def execute(config, action, broker_cfgs, preview, app_name):
                 broker.delete_rdps(solace_rdps)
             if solace_queues:
                 broker.delete_queues(solace_queues)
-            if solace_client_usernames:
-                broker.delete_client_username(solace_client_usernames[0], app_name, config.get("user"))
-            if solace_client_certificate_usernames:
-                broker.delete_client_username(solace_client_certificate_usernames[0], app_name, config.get("user"))
-            if solace_authorization_groups:
-                broker.delete_authorization_group(solace_authorization_groups[0], app_name)
+            if source_client_type == target_client_type:
+                if solace_client_usernames:
+                    broker.delete_client_username(solace_client_usernames[0], app_name, config.get("user"))
+                if solace_client_certificate_usernames:
+                    broker.delete_client_username(solace_client_certificate_usernames[0], app_name, config.get("user"))
+                if solace_authorization_groups:
+                    broker.delete_authorization_group(solace_authorization_groups[0], app_name)
+            else:
+                undeploy_client_type(broker, target_client_type, config.get("user"), app_name)
             if solace_acl_profiles:
                 broker.delete_acl_profile(solace_acl_profiles[0], app_name)
 
