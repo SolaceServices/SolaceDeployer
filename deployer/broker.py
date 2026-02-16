@@ -245,7 +245,7 @@ class Broker:
         configuration = queue["queueConfiguration"]
         configuration["msgVpnName"] = self.msg_vpn_name
         queue_name = configuration["queueName"]
-        if not configuration["owner"]:
+        if owner.get("name"):
             configuration["owner"] = owner["name"]
         logging.info(f"Create queue '{queue_name}' on messageVPN '{self.msg_vpn_name}'")
         if self.queue_exists(queue_name):
