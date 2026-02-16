@@ -25,6 +25,11 @@ class Broker:
         self.msg_vpn_name = msg_vpn_name
         self.headers = headers
 
+    def client_profile_exists(self, profile_name):
+        url = f"msgVpns/{ self.msg_vpn_name }/clientProfiles/{profile_name}"
+        response = self.api("GET", url)
+        return response.status_code == 200
+
     def get_client_profile_names(self):
         logging.info("Get Client Profiles")
         url = f"msgVpns/{ self.msg_vpn_name }/clientProfiles"
@@ -177,6 +182,10 @@ class Broker:
         client_username["aclProfileName"] = acl_profile["aclProfileName"]
         user_name = user.get("name")
         client_username["clientUsername"] =  user_name
+        client_profile_name = user.get("clientProfileName", "default")
+        client_username["clientProfileName"] = client_profile_name
+        if not self.client_profile_exists(client_profile_name):
+            logging.error(f"Client Profile Name {client_profile_name} does NOT exist on broker {self.name}")
         if user.get("type") == "solaceClientUsername":
             client_username["password"] = user.get("password")
         logging.info(f"Create clientUsername {user_name} on messageVPN {self.msg_vpn_name}")
@@ -212,7 +221,11 @@ class Broker:
         authorization_group["msgVpnName"] = self.msg_vpn_name
         authorization_group["aclProfileName"] = acl_profile["aclProfileName"]
         authorization_group["authorizationGroupName"] = group_name
-        logging.info(f"Create authorizationGroup  {group_name} on messageVPN {self.msg_vpn_name}")
+        client_profile_name = group.get("clientProfileName", "default")
+        authorization_group["clientProfileName"] = client_profile_name
+        if not self.client_profile_exists(client_profile_name):
+            logging.error(f"Client Profile Name {client_profile_name} does NOT exist on broker {self.name}")
+        logging.info(f"Create authorizationGroup {group_name} on messageVPN {self.msg_vpn_name}")
         if self.authorization_group_exists(group_name):
             logging.debug(f"PATCH { url } payload { authorization_group }")
             resp = self.api("PATCH", f"{url}/{group_name}", json=authorization_group)
@@ -245,7 +258,7 @@ class Broker:
         configuration = queue["queueConfiguration"]
         configuration["msgVpnName"] = self.msg_vpn_name
         queue_name = configuration["queueName"]
-        if owner.get("name"):
+        if owner and owner.get("name"):
             configuration["owner"] = owner["name"]
         logging.info(f"Create queue '{queue_name}' on messageVPN '{self.msg_vpn_name}'")
         if self.queue_exists(queue_name):
