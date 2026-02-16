@@ -20,7 +20,8 @@
           "version": "0.1.0",
           "user": {
             "name": "app2-tst",
-            "type": "solaceClientCertificate"
+            "type": "solaceClientCertificate",
+            "clientProfileName": "[some predefined existing client profile template name]"
           }
         },
         {
@@ -30,6 +31,10 @@
             "name": "app3_role",
             "type": "solaceAuthorizationGroup"
           }
+        },
+        {
+          "name": "RDP_Application_1",
+          "version": "0.1.0"
         }
       ]
     }

@@ -369,12 +369,13 @@ config/tst.json
           "user": {
             "name": "app1-tst",
             "type": "solaceClientUsername",
-            "password": "app1-tst"
+            "password": "app1-tst",
+            "clientProfileName", "[some existing client profile name]"
           }
         },
         {
           "name": "Application_2",
-          "version": "0.1.0"
+          "version": "0.1.0",
           "user": {
             "name": "app2-tst",
             "type": "solaceClientCertificate"
@@ -382,11 +383,15 @@ config/tst.json
         },
         {
           "name": "Application_3",
-          "version": "0.1.0"
+          "version": "0.1.0",
           "user": {
             "name": "app3-role",
             "type": "solaceAuthorizationGroup"
           }
+        },
+        {
+          "name": "RDP_Application_1",
+          "version": "0.1.0"
         }
       ]
     }
@@ -400,6 +405,9 @@ config/tst.json
   }]
 }
 ```
+If you are using client profile templates, make sure these exist on the broker to which you are deploying.
+Also DO NOT SPECIFY A USER WHEN CONFIGURING AN RDP APPLICATION!!
+
 Make sure the Cloud EMA's are running for each environment:
 
 If these don't run you cannot use configPush
