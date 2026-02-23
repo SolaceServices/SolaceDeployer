@@ -217,7 +217,7 @@ class Broker:
     def create_authorization_group(self, authorization_group, acl_profile, app_name, group):
         logging.info(f"Create Authentication Group {group.get("name")} for Application {app_name}")
         url = f"msgVpns/{ self.msg_vpn_name }/authorizationGroups"
-        group_name = group.get("name")
+        group_name = group.get("role")
         authorization_group["msgVpnName"] = self.msg_vpn_name
         authorization_group["aclProfileName"] = acl_profile["aclProfileName"]
         authorization_group["authorizationGroupName"] = group_name
@@ -237,7 +237,7 @@ class Broker:
 
     def delete_authorization_group(self, authorization_group, group, app_name):
         url = f"msgVpns/{ self.msg_vpn_name }/authorizationGroups"
-        authorization_group_name = group.get("name")
+        authorization_group_name = group.get("role")
         delete_url = f"{url}/{authorization_group_name}"
         logging.info(f"Delete Authorization Group {authorization_group_name} for Application {app_name}")
         resp = self.api("DELETE", delete_url)

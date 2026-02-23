@@ -385,7 +385,8 @@ config/tst.json
           "name": "Application_3",
           "version": "0.1.0",
           "user": {
-            "name": "app3-role",
+            "role": "app3-role",
+            "name": "app3-name(will be used as queueu owner)"  
             "type": "solaceAuthorizationGroup"
           }
         },

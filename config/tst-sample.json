@@ -28,7 +28,8 @@
           "name": "Application_3",
           "version": "0.1.0",
           "user": {
-            "name": "app3_role",
+            "role": "app3_role",
+            "name": "app3_tst",
             "type": "solaceAuthorizationGroup"
           }
         },
