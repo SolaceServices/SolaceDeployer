@@ -24,11 +24,18 @@ class EventPortal:
     # Token Permissions: [ event_designer:access and application_domain:get:* ]
     def get_application_domain_object(self,application_domain_name):
         try:
-            response = self.design_api("GET", "applicationDomains", params={"name": application_domain_name})
-            application_domains = response.get("data")
-            for domain in application_domains:
-                if domain.get('name') == application_domain_name:
-                    return domain
+            page = 1
+            while True:
+                response = self.design_api("GET", "applicationDomains", params={"name": application_domain_name, "pageNumber": page})
+                data = response.get("data",[])
+                pagination = response.get("meta", {}).get("pagination", {})
+                for item in data:
+                    if item.get('name') == application_domain_name:
+                        return item
+                next_page = pagination.get("nextPage")
+                if not next_page:
+                    return None
+                page = next_page
         except Exception as ex:
             raise ex
 
@@ -39,9 +46,17 @@ class EventPortal:
     # Token Permissions: [ event_designer:access and application:get:* ]
     def get_application_objects(self,application_domain_id):
         try:
-            response = self.design_api("GET", "applications", params={"applicationDomainId": application_domain_id})
-            applications = response.get("data")
-            return applications
+            page = 1
+            all_data = []
+            while True:
+                response = self.design_api("GET", "applications", params={"applicationDomainId": application_domain_id, "pageNumber": page})
+                data = response.get("data",[])
+                pagination = response.get("meta", {}).get("pagination", {})
+                all_data.extend(data)
+                next_page = pagination.get("nextPage")
+                if not next_page:
+                    return all_data
+                page = next_page
         except Exception as ex:
             raise ex
 
@@ -63,9 +78,17 @@ class EventPortal:
     # Token Permissions: [ event_designer:access and application:get:* ]
     def get_application_version_objects(self,application_id):
         try:
-            response = self.design_api("GET", "applicationVersions", params={"applicationIds": application_id})
-            versions = response.get("data")
-            return versions
+            page = 1
+            all_data = []
+            while True:
+                response = self.design_api("GET", "applicationVersions", params={"applicationIds": application_id, "pageNumber": page})
+                data = response.get("data",[])
+                pagination = response.get("meta", {}).get("pagination", {})
+                all_data.extend(data)
+                next_page = pagination.get("nextPage")
+                if not next_page:
+                    return all_data
+                page = next_page
         except Exception as ex:
             raise ex
 
@@ -93,11 +116,18 @@ class EventPortal:
     # Token Permissions: [ event_designer:access and ep_environment:get:* ]
     def get_environment_object(self, environment_name):
         try:
-            response = self.runtime_api("GET", "environments")
-            data = response.get("data")
-            for env in data:
-                if env.get('name') == environment_name:
-                    return env
+            page = 1
+            while True:
+                response = self.runtime_api("GET", "environments", params={"pageNumber": page})
+                data = response.get("data",[])
+                pagination = response.get("meta", {}).get("pagination", {})
+                for item in data:
+                    if item.get('name') == environment_name:
+                        return item
+                next_page = pagination.get("nextPage")
+                if not next_page:
+                    return None
+                page = next_page
         except Exception as ex:
             raise ex
 
@@ -108,11 +138,18 @@ class EventPortal:
     # Token Permissions: [ event_designer:access and modeled_event_mesh:get:* ]
     def get_modeled_event_mesh_object(self, environment_id, mesh_name):
         try:
-            response = self.runtime_api("GET", "eventMeshes", params={"environmentId": environment_id})
-            data = response.get("data")
-            for mesh in data:
-                if mesh.get('name') == mesh_name:
-                    return mesh
+            page = 1
+            while True:
+                response = self.runtime_api("GET", "eventMeshes", params={"environmentId": environment_id, "pageNumber": page})
+                data = response.get("data",[])
+                pagination = response.get("meta", {}).get("pagination", {})
+                for item in data:
+                    if item.get('name') == mesh_name:
+                        return item
+                next_page = pagination.get("nextPage")
+                if not next_page:
+                    return None
+                page = next_page
         except Exception as ex:
             raise ex
 
@@ -123,9 +160,17 @@ class EventPortal:
     # Token Permissions: [ event_designer:access and modeled_event_broker:get:* ]
     def get_messaging_services_objects(self, mesh_id):
         try:
-            response = self.runtime_api("GET", "messagingServices", params={"eventMeshId": mesh_id})
-            services = response.get("data")
-            return services
+            page = 1
+            all_data = []
+            while True:
+                response = self.runtime_api("GET", "messagingServices", params={"eventMeshId": mesh_id, "pageNumber": page})
+                data = response.get("data",[])
+                pagination = response.get("meta", {}).get("pagination", {})
+                all_data.extend(data)
+                next_page = pagination.get("nextPage")
+                if not next_page:
+                    return all_data
+                page = next_page
         except Exception as ex:
             raise ex
 
@@ -165,9 +210,18 @@ class EventPortal:
     # Token Permissions: [ mission_control:access or services:get or services:get:self or services:view or services:view:self ]
     def get_event_broker_objects(self, environment_id):
         try:
-            response = self.missioncontrol_api("GET", "eventBrokerServices", params={"customAttributes": f"environmentId=={environment_id}"})
-            brokers = response.get("data")
-            return brokers
+            page = 1
+            all_data = []
+            while True:
+                response = self.missioncontrol_api("GET", "eventBrokerServices",
+                                params={"customAttributes": f"environmentId=={environment_id}","pageNumber": page})
+                data = response.get("data",[])
+                pagination = response.get("meta", {}).get("pagination", {})
+                all_data.extend(data)
+                next_page = pagination.get("nextPage")
+                if not next_page:
+                    return all_data
+                page = next_page
         except Exception as ex:
             raise ex
 
@@ -191,9 +245,18 @@ class EventPortal:
     # Token Permissions: [ mission_control:access or services:get or services:get:self or services:view or services:view:self ]
     def get_client_profile_objects(self, service_id):
         try:
-            response = self.missioncontrol_api("GET", f"eventBrokerServices/{service_id}/clientProfiles")
-            profiles = response.get("data")
-            return profiles
+            page = 1
+            all_data = []
+            while True:
+                response = self.missioncontrol_api("GET", f"eventBrokerServices/{service_id}/clientProfiles",
+                                                   params={"pageNumber": page})
+                data = response.get("data",[])
+                pagination = response.get("meta", {}).get("pagination", {})
+                all_data.extend(data)
+                next_page = pagination.get("nextPage")
+                if not next_page:
+                    return all_data
+                page = next_page
         except Exception as ex:
             raise ex
 

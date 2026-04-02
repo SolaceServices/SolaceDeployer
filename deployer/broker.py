@@ -323,12 +323,12 @@ class Broker:
         response = self.api("GET", url)
         return response.status_code == 200
 
-    def create_rdps(self, solace_rdps):
+    def create_rdps(self, solace_rdps, rest_consumers):
         logging.info(f"Create restDeliveryPoints")
         for rdp in solace_rdps:
-            self.create_rdp(rdp)
+            self.create_rdp(rdp, rest_consumers)
 
-    def create_rdp(self, rdp):
+    def create_rdp(self, rdp, rest_consumers):
         url = f"msgVpns/{ self.msg_vpn_name }/restDeliveryPoints"
         configuration = rdp["restDeliveryPointConfiguration"]
         configuration["msgVpnName"] = self.msg_vpn_name
@@ -342,7 +342,7 @@ class Broker:
             logging.debug(f"POST { url } payload { configuration }")
             resp = self.api("POST", url, json=configuration)
             self.check_response(resp, "rdp", rdp_name)
-        self.process_rdp_consumers(rdp_name, rdp["restConsumers"])
+        self.process_rdp_consumers(rdp_name, rdp["restConsumers"], rest_consumers)
 
     def delete_rdps(self, solace_rdps):
         logging.info(f"Delete restDeliveryPoints")
@@ -357,10 +357,39 @@ class Broker:
         resp = self.api("DELETE", f"{url}/{rdp_name}")
         self.check_response(resp, "rdp", rdp_name)
 
-    def process_rdp_consumers(self, rdp_name, rdp_consumers):
-        for rest_consumer in rdp_consumers:
-            rest_consumer_name = rest_consumer["restConsumerConfiguration"]["restConsumerName"]
-            self.create_rdp_consumer(rdp_name, rest_consumer)
+    def _deep_merge(self, base, override):
+        result = base.copy()
+        for key, value in override.items():
+            if key in result:
+                if isinstance(result[key], dict) and isinstance(value, dict):
+                    # recursively merge dicts
+                    result[key] = self._deep_merge(result[key], value)
+                elif isinstance(result[key], list) and isinstance(value, list):
+                    # merge lists element by element
+                    merged_list = []
+                    for i, override_item in enumerate(value):
+                        if i < len(result[key]):
+                            base_item = result[key][i]
+                            if isinstance(base_item, dict) and isinstance(override_item, dict):
+                                merged_list.append(self._deep_merge(base_item, override_item))
+                            else:
+                                merged_list.append(override_item)
+                        else:
+                            merged_list.append(override_item)
+                    # keep any remaining base items not in override
+                    merged_list += result[key][len(value):]
+                    result[key] = merged_list
+                else:
+                    result[key] = value
+            else:
+                result[key] = value
+        return result
+
+    def process_rdp_consumers(self, rdp_name, rdp_consumers, rest_consumers):
+        for i, rdp_consumer in enumerate(rdp_consumers):
+            rest_consumer = rest_consumers[i]
+            resulting_consumer = self._deep_merge(rdp_consumer, rest_consumer)
+            self.create_rdp_consumer(rdp_name, resulting_consumer)
 
     def get_rdp_consumers(self, rdp_name):
         url = f"msgVpns/{ self.msg_vpn_name }/restDeliveryPoints/{rdp_name}/restConsumers"
@@ -418,7 +447,7 @@ class Broker:
     def create_queue_binding_request_headers(self, rdp_name, queue_binding_name, protected, request_headers):
         logging.info(f"Create RDP Queue Bindings RequestHeaders")
         for request_header in request_headers:
-            self.create_queu_bindings_request_header(rdp_name, queue_binding_name)
+            self.create_queue_binding_request_header(rdp_name, queue_binding_name, protected, request_header)
 
     def create_queue_binding_request_header(self, rdp_name, queue_binding_name, protected, request_header):
         request = "protectedRequestHeaders" if protected else "requestHeaders"

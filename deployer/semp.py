@@ -110,7 +110,8 @@ def execute(config, action, broker_cfgs, preview, app_name):
             if solace_queues:
                 broker.create_queues(solace_queues, config.get("user"))
             if solace_rdps:
-                broker.create_rdps(solace_rdps)
+                rest_consumers = config.get("restConsumers",[])
+                broker.create_rdps(solace_rdps, rest_consumers)
             if solace_rdp_queue_bindings:
                 broker.create_rdp_queue_bindings(solace_rdp_queue_bindings)
         else:

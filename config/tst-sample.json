@@ -35,7 +35,38 @@
         },
         {
           "name": "RDP_Application_1",
-          "version": "0.1.0"
+          "version": "0.1.0",
+          "restConsumers": [
+            {
+              "restConsumerConfiguration": {
+                "remoteHost": "[hostname]",
+                "remotePort": 443,
+                "tlsEnabled": true,
+                "restConsumerName": "[consumer name]",
+                "authenticationScheme": "aws",
+                "authenticationAwsRegion": "[region]",
+                "authenticationAwsService": "[service]",
+                "authenticationAwsAccessKeyId": "[aws access key id]",
+                "authenticationAwsSecretAccessKey": "[aws secret access key]"
+              }
+            }
+          ]
+        },
+        {
+          "name": "RDP_Application_1",
+          "version": "0.1.0",
+          "user": {
+            "type": "solaceRdpConsumer",
+            "restConsumerConfiguration": {
+              "remoteHost": "[hostname]",
+              "remotePort": 443,
+              "tlsEnabled": true,
+              "restConsumerName": "Generic Certificate",
+              "authenticationScheme": "client-certificate",
+              "authenticationClientCertContent": "[client cert content]",
+              "authenticationClientCertPassword": "[client cert password]"
+            }
+          }
         }
       ]
     }
