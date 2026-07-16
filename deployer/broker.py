@@ -426,12 +426,6 @@ class Broker:
 
     def create_rdp_queue_binding(self, queue_binding):
         configuration = queue_binding["queueBindingConfiguration"]
-        # below codefragment is needed because the escape sequence for the "/" has to be fixed from what we read from the cloud API preview
-        # and what needs to be deployed by the SEMP API call
-        post_request_target = configuration["postRequestTarget"]
-        if configuration.get("requestTargetEvaluation") == 'substitution-expressions':
-            fixed_value = post_request_target.encode('raw_unicode_escape').decode('unicode_escape')
-            configuration["postRequestTarget"] = fixed_value
         logging.info(f"queueBindingConfig={configuration}")
         rdp_name = configuration["restDeliveryPointName"]
         queue_binding_name = configuration["queueBindingName"]
