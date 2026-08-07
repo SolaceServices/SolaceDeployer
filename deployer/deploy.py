@@ -40,7 +40,7 @@ def get_parameters(arguments):
     action = arguments.action if arguments.action else Action.DEPLOY.value
     apps = arguments.appl
     config_loader = ConfigLoader()
-
+    disableCheck = not arguments.enableEligibilityCheck
     preview_config = config_loader.load_config(Environment.DEV.value)
     target_config = config_loader.load_config(arguments.target)
     ep_config = config_loader.load_config("eventPortal")
@@ -88,7 +88,7 @@ def get_parameters(arguments):
         domain_id = ep.get_application_domain_id(target_domain["domainName"])
         target_domain["domainId"] = domain_id
         logging.debug(f"applicationDomain: { domain_id }")
-        add_eligible_version_ids(ep, domain_id, target_config["environment"], action, mode, target_config)
+        add_eligible_version_ids(ep, domain_id, target_config["environment"], action, mode, disableCheck, target_config)
     return {
         "base_url": base_url,
         "eventPortal": ep,
@@ -100,7 +100,7 @@ def get_parameters(arguments):
         "broker_ids": broker_ids
     }
 
-def add_eligible_version_ids(ep, domain_id, env, action, mode, parameters):
+def add_eligible_version_ids(ep, domain_id, env, action, mode, disableCheck, parameters):
     if not isinstance(ep, EventPortal):
         raise TypeError("Expect an EventPortal instance")
 
@@ -115,7 +115,7 @@ def add_eligible_version_ids(ep, domain_id, env, action, mode, parameters):
             logging.debug(f"applicationVersion= { application_version }")
             if application_version is None:
                 raise Exception({"code": "NOT_EXIST", "message": f"App { app_name } version { version_name } does not exist in environment { env }"})
-            if is_version_eligible(env, app_name, action, mode, application_version):
+            if disableCheck or is_version_eligible(env, app_name, action, mode, application_version):
                 application["versionId"]=application_version["id"]
                 state = State.from_value(application_version["stateId"])
                 application["state"] = state.label

@@ -31,16 +31,18 @@ def parse_arguments():
     parser.add_argument("--action", type=str, help="Action, one of [deploy, undeploy]", default="deploy")
     parser.add_argument("--log", type=str, help="Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)", default="INFO")
     parser.add_argument("--proxy", type=str, help="Enable usage of proxy ()true, false", default="false")
+    parser.add_argument("--enableEligibilityCheck", action="store_true", default=False, help="Enable eligibility check for the target environment (True if specified False otherwise)")
     return parser.parse_args()
 
 def show_help(app_name='deploy'):
-    logging.info(f"{app_name} --mode=[deploymode] --target=[environment] [--appl=[applicationName]] [--action=[action]] [--log=[level]]")
+    logging.info(f"{app_name} --mode=[deploymode] --target=[environment] [--appl=[applicationName]] [--action=[action]] [--log=[level]] [--enableEligibilityCheck]")
     logging.info(f"     --mode: deployment mode, one of [configPush, semp] (required)")
     logging.info(f"     --target: target environment to execute the action on [one of tst,acc,prd]")
     logging.info(f'     --appl: JSON string of domainnames and their applications to handle. Example: \'[{{"domain1":["appl1","appl2"]}}]\'')
     logging.info(f"     --action: Action, one of [deploy, undeploy] (optional, default 'deploy'")
     logging.info(f"     --log: Set the logging level [DEBUG, INFO, WARNING, ERROR, CRITICAL] (optional, default 'INFO'")
     logging.info(f"     --proxy: Enable usage of proxy [true, false] (optional, default 'false'")
+    logging.info(f"     --enableEligibilityCheck: Enable eligibility check for the target environment (True if specified False otherwise)")
     exit(1)
 
 def setup_logging(log_level):
