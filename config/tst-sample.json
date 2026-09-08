@@ -19,8 +19,8 @@
           "name": "Application_2",
           "version": "0.1.0",
           "user": {
-            "name": "app2-tst",
-            "type": "solaceClientCertificate",
+            "name": "should be the CN from the certificate",
+            "type": "solaceClientCertificateUsername",
             "clientProfileName": "[some predefined existing client profile template name]"
           }
         },
